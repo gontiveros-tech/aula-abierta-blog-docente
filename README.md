@@ -1,29 +1,25 @@
-# Aula Abierta — Blog Docente
+# Aula Abierta — integración visual y funcional de Stitch
 
-## Estado actual
+Contiene las **10 pantallas originales** de Stitch, conservadas, y un módulo operativo superpuesto de gestión de artículos, comentarios e imágenes.
 
-**Prototipo funcional mínimo**, preparado para alojarse como sitio estático. Contiene portada, blog, administración demostrativa y persistencia mediante IndexedDB.
+## Ejecutar
 
-### Archivos
-- `index.html`: portada.
-- `blog.html`: listado, lectura y comentarios.
-- `admin.html`: creación, edición, publicación, eliminación y moderación.
-- `js/db.js`: persistencia IndexedDB.
-- `js/admin.js` y `js/blog.js`: lógica de interacción.
-- `netlify.toml`: publicación estática en Netlify.
+Publicar la carpeta raíz en Netlify o iniciar un servidor HTTP local (por ejemplo `python -m http.server 8000`). Abrir `index.html`.
 
-## Limitaciones importantes
+## Flujo
 
-- **No es un blog multiusuario:** IndexedDB guarda datos por navegador y origen; otros visitantes no ven los artículos creados por el docente.
-- **Sin autenticación:** la administración es pública y solo demostrativa.
-- No incorpora aún las diez pantallas visuales completas generadas originalmente por Stitch. Esta subida inicial prioriza el recorrido funcional mínimo; el ZIP original se conserva como referencia para la integración visual.
-- No se han realizado pruebas de navegador ni despliegue público.
+1. `editor.html`: crear un artículo, escribir contenido, seleccionar **Publicado** y guardar.
+2. `gestion.html`: comprobar persistencia, editar, despublicar o eliminar.
+3. `publicaciones.html`: ver el artículo publicado.
+4. `lectura.html`: abrir el artículo y enviar un comentario.
+5. `moderacion.html`: aprobarlo.
+6. Recargar `lectura.html` y comprobar que aparece.
 
-## Próximos pasos
+## Advertencias
 
-1. Publicar el repositorio en un servicio de alojamiento estático.
-2. Verificar creación, edición, publicación y moderación en un navegador real.
-3. Integrar las pantallas visuales de Stitch.
-4. Implementar autenticación y almacenamiento compartido (por ejemplo, Supabase) antes de considerarlo un blog real.
-
-**Experimento educativo:** evaluación de la transición de diseño generado con Stitch a software desplegable y verificable.
+- **No es una aplicación multiusuario**: IndexedDB es almacenamiento local por navegador.
+- **No hay autenticación**: las pantallas administrativas son públicas y solo demostrativas.
+- Los textos, botones y tarjetas estáticas originales de Stitch siguen siendo maqueta. El bloque marcado como **funcional** contiene los controles conectados a IndexedDB.
+- Imágenes limitadas a 1 MB; pueden agotarse las cuotas de almacenamiento.
+- Para producción hacen falta backend compartido, autenticación, autorización, políticas de seguridad, controles de medios y pruebas de navegador.
+- No afirmar pruebas de navegador ni despliegue si no se han ejecutado.
