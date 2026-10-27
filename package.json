@@ -1,0 +1,8 @@
+{
+  "name": "aula-abierta-blog",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^9.1.0"
+  }
+}
