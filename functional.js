@@ -6,7 +6,7 @@ const uuid=()=>crypto.randomUUID();
 const panel=document.createElement('section');panel.id='aa-functional';panel.setAttribute('aria-label','Blog Aula Abierta');
 const main=$('main')||document.body;main.prepend(panel);
 const nav=document.createElement('nav');nav.id='aa-nav';nav.innerHTML='<a href="index.html">Inicio</a><a href="publicaciones.html">Publicaciones</a><a href="recursos.html">Recursos</a><a href="acceso.html">Administración</a>';
-document.body.prepend(nav);
+document.body.prepend(nav);for(const n of document.querySelectorAll('nav')){if(n!==nav&&n.textContent?.includes('Navegación integrada (prototipo)'))n.remove();}
 const link=a=>'lectura.html?id='+encodeURIComponent(a.id);
 const card=a=>'<article class="aa-item"><h3><a href="'+link(a)+'">'+esc(a.title)+'</a></h3><small>'+esc(a.category||'Educación')+'</small><p>'+esc(a.body.slice(0,220))+'</p><a href="'+link(a)+'">Leer artículo completo →</a></article>';
 const formInput=(label,id,value='',type='text')=>'<label>'+label+'<input id="'+id+'" type="'+type+'" value="'+esc(value)+'" required></label>';
