@@ -1,25 +1,26 @@
-# Aula Abierta — integración visual y funcional de Stitch
+# Aula Abierta — Mi Blog Docente
 
-Contiene las **10 pantallas originales** de Stitch, conservadas, y un módulo operativo superpuesto de gestión de artículos, comentarios e imágenes.
+Blog educativo para docentes de nivel primario y secundario en República Dominicana.
 
-## Ejecutar
+## Pantallas
 
-Publicar la carpeta raíz en Netlify o iniciar un servidor HTTP local (por ejemplo `python -m http.server 8000`). Abrir `index.html`.
+- **Inicio** — Página principal con artículos destacados y áreas curriculares
+- **Publicaciones** — Listado de publicaciones educativas
+- **Lectura** — Vista de lectura de artículos
+- **Recursos** — Recursos didácticos descargables
+- **Panel** — Panel de control docente (admin)
+- **Gestión** — Gestión de artículos
+- **Editor** — Editor de artículos
+- **Biblioteca** — Biblioteca multimedia
+- **Moderación** — Moderación de comentarios
 
-## Flujo
+## Tecnologías
 
-1. `editor.html`: crear un artículo, escribir contenido, seleccionar **Publicado** y guardar.
-2. `gestion.html`: comprobar persistencia, editar, despublicar o eliminar.
-3. `publicaciones.html`: ver el artículo publicado.
-4. `lectura.html`: abrir el artículo y enviar un comentario.
-5. `moderacion.html`: aprobarlo.
-6. Recargar `lectura.html` y comprobar que aparece.
+- HTML5 + Tailwind CSS (CDN)
+- IndexedDB para persistencia local (db.js)
+- Google Material Symbols
+- Tipografías: Literata + Source Sans 3
 
-## Advertencias
+## Despliegue
 
-- **No es una aplicación multiusuario**: IndexedDB es almacenamiento local por navegador.
-- **No hay autenticación**: las pantallas administrativas son públicas y solo demostrativas.
-- Los textos, botones y tarjetas estáticas originales de Stitch siguen siendo maqueta. El bloque marcado como **funcional** contiene los controles conectados a IndexedDB.
-- Imágenes limitadas a 1 MB; pueden agotarse las cuotas de almacenamiento.
-- Para producción hacen falta backend compartido, autenticación, autorización, políticas de seguridad, controles de medios y pruebas de navegador.
-- No afirmar pruebas de navegador ni despliegue si no se han ejecutado.
+Sitio estático desplegado en Render (Free Tier).
