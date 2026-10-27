@@ -1,7 +1,7 @@
 const page=location.pathname.split('/').pop()||'index.html';
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const api=async(op,body)=>{const headers={'content-type':'application/json'};const pwd=sessionStorage.getItem('aula-admin');if(pwd)headers['x-admin-password']=pwd;const r=await fetch('/api/'+op,{method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})});let data;try{data=await r.json()}catch{throw Error('El servicio de datos no responde. Comprueba el despliegue de Netlify.')}if(!r.ok)throw Error(data.error||'Error del servidor');return data};
+const api=async(op,body)=>{const headers={'content-type':'application/json'};const pwd=sessionStorage.getItem('aula-admin');if(pwd)headers['x-admin-password']=pwd;const r=await fetch('/.netlify/functions/content?op='+encodeURIComponent(op),{method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})});let data;try{data=await r.json()}catch{throw Error('El servicio de datos no responde. Comprueba el despliegue de Netlify.')}if(!r.ok)throw Error(data.error||'Error del servidor');return data};
 const uuid=()=>crypto.randomUUID();
 const panel=document.createElement('section');panel.id='aa-functional';panel.setAttribute('aria-label','Blog Aula Abierta');
 const main=$('main')||document.body;
