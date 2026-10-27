@@ -4,9 +4,13 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const api=async(op,body)=>{const headers={'content-type':'application/json'};const pwd=sessionStorage.getItem('aula-admin');if(pwd)headers['x-admin-password']=pwd;const r=await fetch('/api/'+op,{method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})});let data;try{data=await r.json()}catch{throw Error('El servicio de datos no responde. Comprueba el despliegue de Netlify.')}if(!r.ok)throw Error(data.error||'Error del servidor');return data};
 const uuid=()=>crypto.randomUUID();
 const panel=document.createElement('section');panel.id='aa-functional';panel.setAttribute('aria-label','Blog Aula Abierta');
-const main=$('main')||document.body;main.prepend(panel);
+const main=$('main')||document.body;
+const publicDesignPages=['index.html','publicaciones.html','recursos.html'];
+document.body.classList.add(publicDesignPages.includes(page)?'aa-original-design':'aa-functional-screen');
+main.append(panel);
 const nav=document.createElement('nav');nav.id='aa-nav';nav.innerHTML='<a href="index.html">Inicio</a><a href="publicaciones.html">Publicaciones</a><a href="recursos.html">Recursos</a><a href="acceso.html">Administración</a>';
-document.body.prepend(nav);for(const n of document.querySelectorAll('nav')){if(n!==nav&&n.textContent?.includes('Navegación integrada (prototipo)'))n.remove();}
+document.querySelectorAll('#aa-nav').forEach(n=>n.remove());
+document.body.prepend(nav);
 const link=a=>'lectura.html?id='+encodeURIComponent(a.id);
 const card=a=>'<article class="aa-item"><h3><a href="'+link(a)+'">'+esc(a.title)+'</a></h3><small>'+esc(a.category||'Educación')+'</small><p>'+esc(a.body.slice(0,220))+'</p><a href="'+link(a)+'">Leer artículo completo →</a></article>';
 const formInput=(label,id,value='',type='text')=>'<label>'+label+'<input id="'+id+'" type="'+type+'" value="'+esc(value)+'" required></label>';
