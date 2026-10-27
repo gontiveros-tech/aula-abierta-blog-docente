@@ -21,7 +21,7 @@ if(isAdmin&&!sessionStorage.getItem('aula-admin')){lock();return}
 if(page==='acceso.html'){
 let configured=false;try{configured=(await api('status')).adminConfigured}catch{}
 panel.innerHTML='<h2>Acceso docente</h2><p>'+(configured?'Introduce tu contraseña administrativa.':'El administrador debe configurar la variable AULA_ADMIN_PASSWORD en Netlify (mínimo 16 caracteres).')+'</p><form id="aa-login">'+formInput('Contraseña','aa-password','','password')+'<button>Entrar</button></form><p id="aa-status" role="status"></p>';
-$('#aa-login').onsubmit=async ev=>{ev.preventDefault();sessionStorage.setItem('aula-admin',$('#aa-password').value);try{await api('articles');location.href='panel.html'}catch(err){sessionStorage.removeItem('aula-admin');setStatus(err.message)}};
+$('#aa-login').onsubmit=async ev=>{ev.preventDefault();sessionStorage.setItem('aula-admin',$('#aa-password').value);try{const check=await api('status');if(!check.authorized)throw Error('Contraseña incorrecta o administración no configurada');location.href='panel.html'}catch(err){sessionStorage.removeItem('aula-admin');setStatus(err.message)}};
 return;
 }
 if(page==='index.html'||page==='publicaciones.html'){
