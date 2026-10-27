@@ -1,4 +1,4 @@
-import {getStore} from '@netlify/blobs';
+import {getStore,connectLambda} from '@netlify/blobs';
 import {timingSafeEqual,createHash,randomUUID} from 'node:crypto';
 const json=(code,data)=>({statusCode:code,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','access-control-allow-origin':'*'},body:JSON.stringify(data)});
 const safe=(s,max=3000)=>String(s??'').trim().slice(0,max);
@@ -7,6 +7,7 @@ export const handler=async(event)=>{
 try{
 const method=event.httpMethod, op=event.queryStringParameters?.op||'articles';
 if(method==='GET'&&op==='status')return json(200,{online:true,adminConfigured:!!(process.env.AULA_ADMIN_PASSWORD?.length>=8),authorized:auth(event.headers)});
+connectLambda(event);
 const store=getStore({name:'aula-abierta-content',consistency:'strong'});
 if(method==='GET'){
  if(op==='articles'){const data=await store.get('articles',{type:'json'})||[];return json(200,auth(event.headers)?data:data.filter(a=>a.status==='published'));}
