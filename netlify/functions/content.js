@@ -8,7 +8,7 @@ try{
 const method=event.httpMethod, op=event.queryStringParameters?.op||'articles';
 if(method==='GET'&&op==='status')return json(200,{online:true,adminConfigured:!!(process.env.AULA_ADMIN_PASSWORD?.length>=8),authorized:auth(event.headers)});
 connectLambda(event);
-const store=getStore({name:'aula-abierta-content',consistency:'strong'});
+const store=getStore({name:'aula-abierta-content'});
 if(method==='GET'){
  if(op==='articles'){const data=await store.get('articles',{type:'json'})||[];return json(200,auth(event.headers)?data:data.filter(a=>a.status==='published'));}
  if(op==='comments'){const data=await store.get('comments',{type:'json'})||[];return json(200,auth(event.headers)?data:data.filter(c=>c.status==='approved'));}
