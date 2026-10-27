@@ -6,9 +6,9 @@ const auth=(h)=>{const secret=process.env.AULA_ADMIN_PASSWORD;if(!secret||secret
 export const handler=async(event)=>{
 try{
 const method=event.httpMethod, op=event.queryStringParameters?.op||'articles';
+if(method==='GET'&&op==='status')return json(200,{online:true,adminConfigured:!!(process.env.AULA_ADMIN_PASSWORD?.length>=8),authorized:auth(event.headers)});
 const store=getStore({name:'aula-abierta-content',consistency:'strong'});
 if(method==='GET'){
- if(op==='status')return json(200,{online:true,adminConfigured:!!(process.env.AULA_ADMIN_PASSWORD?.length>=8),authorized:auth(event.headers)});
  if(op==='articles'){const data=await store.get('articles',{type:'json'})||[];return json(200,auth(event.headers)?data:data.filter(a=>a.status==='published'));}
  if(op==='comments'){const data=await store.get('comments',{type:'json'})||[];return json(200,auth(event.headers)?data:data.filter(c=>c.status==='approved'));}
  return json(404,{error:'Recurso no encontrado'});
