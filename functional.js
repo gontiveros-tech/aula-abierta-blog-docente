@@ -29,10 +29,19 @@ $('#aa-login').onsubmit=async ev=>{ev.preventDefault();sessionStorage.setItem('a
 return;
 }
 if(page==='index.html'||page==='publicaciones.html'){
-panel.innerHTML='<h2>'+(page==='index.html'?'Últimas publicaciones':'Artículos publicados')+'</h2><div id="aa-items">'+(articles.length?articles.map(card).join(''):'<p>Aún no hay publicaciones. Vuelve pronto.</p>')+'</div>';
+const tile=a=>'<article class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-md p-5 flex flex-col gap-3"><div class="text-secondary text-sm font-semibold">'+esc(a.category||'Educación')+'</div>'+(a.image?'<img class="w-full rounded-xl object-cover max-h-72" alt="" src="'+esc(a.image)+'">':'')+'<h2 class="font-headline-sm text-primary font-bold text-xl">'+esc(a.title)+'</h2><p class="text-on-surface-variant">'+esc(a.body.slice(0,260))+'</p><a class="inline-flex self-start rounded-lg bg-primary-container text-on-primary px-4 py-2 font-semibold" href="'+link(a)+'">Leer artículo completo →</a></article>';
+if(page==='index.html'){
+const featured=main.querySelector('article');if(featured){const sec=featured.closest('section');if(sec)sec.style.display='none';else featured.style.display='none'}
+main.querySelectorAll('a[href="#"]').forEach(a=>{if(/ver todas/i.test(a.textContent||''))a.href='publicaciones.html'});
+panel.innerHTML='<h2 class="font-headline-sm text-primary font-bold text-2xl mb-4">Últimas publicaciones</h2>'+(articles.length?'<div class="grid gap-5 md:grid-cols-2">'+articles.slice(0,6).map(tile).join('')+'</div>':'<p class="text-on-surface-variant">Aún no hay publicaciones. Los artículos aparecerán aquí cuando el docente publique el primero.</p>');
+}else{
+main.querySelectorAll('article').forEach(a=>a.remove());
+panel.innerHTML='<h2 class="font-headline-sm text-primary font-bold text-2xl mb-4">Publicaciones docentes</h2>'+(articles.length?'<div class="grid gap-5 md:grid-cols-2">'+articles.map(tile).join('')+'</div>':'<p class="text-on-surface-variant">Todavía no hay artículos publicados.</p>');
+}
 return;
 }
 if(page==='lectura.html'){
+main.querySelectorAll(':scope > :not(#aa-functional)').forEach(el=>el.style.display='none');
 const id=new URLSearchParams(location.search).get('id');const a=articles.find(x=>x.id===id);
 if(!a){panel.innerHTML='<h2>Lecturas</h2><p>Selecciona un artículo en <a href="publicaciones.html">Publicaciones</a>.</p>';return}
 panel.innerHTML='<article><h1>'+esc(a.title)+'</h1><p>'+esc(a.category)+'</p>'+(a.image?'<img class="aa-media" alt="Ilustración del artículo" src="'+a.image+'">':'')+'<div class="aa-body">'+esc(a.body)+'</div></article><h3>Comentarios</h3><div id="aa-comments"></div><form id="aa-comment">'+formInput('Tu nombre','aa-author')+'<label>Comentario<textarea id="aa-text" required maxlength="2000"></textarea></label><input id="aa-website" style="display:none" tabindex="-1" autocomplete="off"><button>Enviar para moderación</button></form><p id="aa-status" role="status"></p>';
