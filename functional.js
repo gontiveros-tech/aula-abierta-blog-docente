@@ -16,7 +16,7 @@ function setStatus(s){const el=$('#aa-status');if(el)el.textContent=s}
 function lock(){panel.innerHTML='<h2>Administración protegida</h2><p>Para gestionar el blog, inicia sesión con la contraseña administrativa.</p><a class="aa-btn" href="acceso.html">Iniciar sesión</a>'}
 async function render(){
 let articles=[],comments=[];
-try{articles=await api('articles');comments=await api('comments')}catch(err){panel.innerHTML='<h2>No se pudo cargar el contenido</h2><p role="alert">'+esc(err.message)+'</p>';return}
+try{articles=await api('articles')}catch(err){panel.innerHTML='<h2>El contenido está temporalmente indisponible</h2><p role="alert">'+esc(err.message)+'</p><p>La aplicación está publicada, pero el servicio de datos aún presenta un problema.</p>';return}try{comments=await api('comments')}catch(err){console.warn('Comentarios no disponibles',err);comments=[]}
 if(isAdmin&&!sessionStorage.getItem('aula-admin')){lock();return}
 if(page==='acceso.html'){
 let configured=false;try{configured=(await api('status')).adminConfigured}catch{}
