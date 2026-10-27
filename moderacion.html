@@ -530,4 +530,226 @@
     location.reload();
   }
 </script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(15,32,66,0.06)]" data-active-classes="text-secondary font-semibold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="panel" href="panel.html"><span class="material-symbols-outlined text-[22px]">dashboard</span><span class="font-label-sm text-label-sm mt-0.5">Panel</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="articulos" href="gestion.html"><span class="material-symbols-outlined text-[22px]">article</span><span class="font-label-sm text-label-sm mt-0.5">Artículos</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="editor" href="editor.html"><div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-on-primary shadow-[0_2px_6px_rgba(15,32,66,0.2)]"><span class="material-symbols-outlined text-[20px]">edit_note</span></div></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="multimedia" href="biblioteca.html"><span class="material-symbols-outlined text-[22px]">photo_library</span><span class="font-label-sm text-label-sm mt-0.5">Medios</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors relative" data-path="moderacion" href="moderacion.html"><span class="material-symbols-outlined text-[22px]">rate_review</span><span class="font-label-sm text-label-sm mt-0.5">Moderación</span><span class="absolute top-1.5 right-2.5 w-1.5 h-1.5 rounded-full bg-error"></span></a></div></nav><script src="db.js"></script>
+<script>
+// === CRUD DINÁMICO: Moderación de Comentarios ===
+(async function() {
+  await AulaAbiertaDB._initPromise;
+
+  var allComments = [], articleMap = {}, currentTab = 'pendientes', searchTerm = '', articleFilterId = 'todos';
+
+  var container = document.getElementById('commentsContainer');
+  var searchInput = document.getElementById('searchInput');
+  var clearBtn = document.getElementById('clearSearch');
+  var articleFilter = document.getElementById('articleFilter');
+  var visibleCountEl = document.getElementById('visibleCount');
+  var emptyState = document.getElementById('emptyState');
+
+  var TAB_STATUS = { pendientes: ['pending'], aprobados: ['approved'], spam: ['rejected','spam'] };
+
+  // Clone tab buttons to strip old listeners
+  var oldTabs = document.querySelectorAll('.tab-btn');
+  var tabBtns = [];
+  oldTabs.forEach(function(btn) { var c = btn.cloneNode(true); btn.parentNode.replaceChild(c, btn); tabBtns.push(c); });
+
+  async function loadData() {
+    allComments = await AulaAbiertaDB.getAll('comments');
+    allComments.sort(function(a, b) { return b.createdAt - a.createdAt; });
+    var articles = await AulaAbiertaDB.getAll('articles');
+    articleMap = {};
+    articles.forEach(function(a) { articleMap[a.id] = a; });
+    populateFilter(articles);
+    renderComments();
+    updateTabCounts();
+  }
+
+  function populateFilter(articles) {
+    articleFilter.innerHTML = '<option value="todos">Todos los artículos educativos</option>';
+    articles.forEach(function(a) {
+      var opt = document.createElement('option');
+      opt.value = a.id; opt.textContent = a.title;
+      articleFilter.appendChild(opt);
+    });
+  }
+
+  function filtered() {
+    var statuses = TAB_STATUS[currentTab] || ['pending'];
+    return allComments.filter(function(c) {
+      if (statuses.indexOf(c.status) === -1) return false;
+      if (articleFilterId !== 'todos' && c.articleId !== articleFilterId) return false;
+      if (searchTerm) {
+        var t = (c.authorName + ' ' + c.content + ' ' + (c.schoolInfo||'')).toLowerCase();
+        if (t.indexOf(searchTerm) === -1) return false;
+      }
+      return true;
+    });
+  }
+
+  function timeAgo(ts) {
+    var d = Date.now() - ts, m = Math.floor(d/60000);
+    if (m < 60) return 'Hace ' + m + ' min';
+    var h = Math.floor(m/60);
+    if (h < 24) return 'Hace ' + h + 'h';
+    var days = Math.floor(h/24);
+    return days === 1 ? 'Ayer' : 'Hace ' + days + ' días';
+  }
+
+  function authorStyle(type) {
+    if (type === 'teacher') return { icon:'school', bg:'bg-secondary-fixed', color:'text-secondary' };
+    if (type === 'family') return { icon:'diversity_3', bg:'bg-secondary-fixed-dim/40', color:'text-secondary' };
+    if (type === 'student') return { icon:'face', bg:'bg-primary-fixed', color:'text-primary' };
+    return { icon:'no_accounts', bg:'bg-error-container', color:'text-error' };
+  }
+
+  function commentHTML(c) {
+    var ai = authorStyle(c.authorType);
+    var artTitle = articleMap[c.articleId] ? articleMap[c.articleId].title : 'Artículo desconocido';
+    var spam = c.isSpamAlert;
+    var borderCls = spam ? 'border-l-error' : 'border-l-secondary/40';
+    var textCls = spam ? 'line-through opacity-80' : '';
+
+    var actions = '';
+    if (currentTab === 'pendientes') {
+      actions = '<div class="mt-space-md pt-space-xs flex flex-col gap-2">' +
+        '<div class="grid grid-cols-2 gap-2">' +
+          '<button class="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-on-tertiary-container text-on-tertiary font-label-lg text-label-lg shadow-sm active:scale-98 transition-transform" onclick="crudAction(\'' + c.id + '\',\'aprobar\')"><span class="material-symbols-outlined text-[18px]">check_circle</span> Aprobar</button>' +
+          '<button class="w-full flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-secondary text-on-secondary font-label-lg text-label-lg shadow-sm active:scale-98 transition-transform" onclick="crudAction(\'' + c.id + '\',\'responder\')"><span class="material-symbols-outlined text-[18px]">reply</span> Aprobar y Responder</button>' +
+        '</div>' +
+        '<div class="grid grid-cols-2 gap-2">' +
+          '<button class="w-full flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md" onclick="crudAction(\'' + c.id + '\',\'rechazar\')"><span class="material-symbols-outlined text-[16px]">close</span> Rechazar</button>' +
+          (spam ? '<button class="w-full flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg bg-error text-on-error font-label-md text-label-md" onclick="crudAction(\'' + c.id + '\',\'eliminar\')"><span class="material-symbols-outlined text-[16px]">delete_forever</span> Eliminar</button>' :
+          '<button class="w-full flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg bg-surface-container-high text-on-surface-variant font-label-md text-label-md" onclick="crudAction(\'' + c.id + '\',\'spam\')"><span class="material-symbols-outlined text-[16px]">flag</span> Marcar Spam</button>') +
+        '</div></div>';
+    } else if (currentTab === 'aprobados') {
+      actions = '<div class="mt-space-md pt-space-xs flex gap-2">' +
+        '<button class="flex-1 flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg bg-error-container text-on-error-container font-label-md text-label-md" onclick="crudAction(\'' + c.id + '\',\'rechazar\')"><span class="material-symbols-outlined text-[16px]">close</span> Revocar</button>' +
+        '<button class="flex-1 flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg bg-error text-on-error font-label-md text-label-md" onclick="crudAction(\'' + c.id + '\',\'eliminar\')"><span class="material-symbols-outlined text-[16px]">delete_forever</span> Eliminar</button></div>';
+    } else {
+      actions = '<div class="mt-space-md pt-space-xs flex gap-2">' +
+        '<button class="flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg bg-on-tertiary-container text-on-tertiary font-label-lg text-label-lg shadow-sm" onclick="crudAction(\'' + c.id + '\',\'aprobar\')"><span class="material-symbols-outlined text-[18px]">check_circle</span> Restaurar</button>' +
+        '<button class="flex-1 flex items-center justify-center gap-1 py-2 px-2.5 rounded-lg bg-error text-on-error font-label-md text-label-md" onclick="crudAction(\'' + c.id + '\',\'eliminar\')"><span class="material-symbols-outlined text-[16px]">delete_forever</span> Eliminar</button></div>';
+    }
+
+    var reply = c.teacherReply ? '<div class="mt-space-sm p-3 rounded-lg bg-primary-fixed/30 border-l-2 border-primary"><div class="flex items-center gap-1 mb-1"><span class="material-symbols-outlined text-primary text-[14px]">reply</span><span class="font-label-sm text-label-sm text-primary font-semibold">Respuesta docente</span></div><p class="font-body-sm text-body-sm text-on-surface">' + c.teacherReply + '</p></div>' : '';
+    var spamBanner = spam ? '<div class="mt-2.5 p-space-sm rounded-lg bg-error-container/70 text-on-error-container flex items-center gap-2.5"><span class="material-symbols-outlined text-error text-[20px] shrink-0">crisis_alert</span><div><span class="font-label-md text-label-md font-bold">Riesgo de Seguridad</span></div></div>' : '';
+
+    return '<article class="comment-card bg-surface-container-lowest rounded-xl p-space-md shadow-sm transition-all duration-300" data-comment-id="' + c.id + '">' +
+      '<div class="flex items-start justify-between gap-space-sm pb-space-xs">' +
+        '<div class="flex items-start gap-space-sm min-w-0">' +
+          '<div class="w-10 h-10 rounded-full ' + ai.bg + ' flex items-center justify-center shrink-0 shadow-sm ' + ai.color + '"><span class="material-symbols-outlined text-[24px]">' + ai.icon + '</span></div>' +
+          '<div class="flex flex-col min-w-0">' +
+            '<div class="flex items-center gap-1.5 flex-wrap"><span class="font-title-md text-title-md text-primary font-bold truncate">' + c.authorName + '</span><span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm shrink-0">' + (c.authorBadge||c.authorType) + '</span></div>' +
+            '<span class="font-body-sm text-body-sm text-on-surface-variant truncate">' + (c.schoolInfo||'') + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<span class="font-label-sm text-label-sm text-outline shrink-0">' + timeAgo(c.createdAt) + '</span>' +
+      '</div>' +
+      '<div class="mt-2.5 px-3 py-1.5 rounded-lg bg-surface-container flex items-center gap-2">' +
+        '<span class="material-symbols-outlined text-secondary text-[16px] shrink-0">article</span>' +
+        '<span class="font-label-md text-label-md text-on-surface truncate">En: <span class="font-semibold text-primary">' + artTitle + '</span></span>' +
+      '</div>' +
+      spamBanner +
+      '<div class="mt-space-sm pl-3 border-l-2 ' + borderCls + ' py-0.5">' +
+        '<p class="font-body-md text-body-md text-on-surface leading-relaxed ' + textCls + '">“' + c.content + '”</p>' +
+      '</div>' +
+      reply + actions +
+    '</article>';
+  }
+
+  function renderComments() {
+    var items = filtered();
+    container.innerHTML = items.map(commentHTML).join('');
+    if (visibleCountEl) visibleCountEl.textContent = items.length;
+    if (items.length === 0) { if(emptyState){emptyState.classList.remove('hidden');emptyState.classList.add('flex');} container.classList.add('hidden'); }
+    else { if(emptyState){emptyState.classList.add('hidden');emptyState.classList.remove('flex');} container.classList.remove('hidden'); }
+  }
+
+  function updateTabCounts() {
+    var counts = { pendientes:0, aprobados:0, spam:0 };
+    allComments.forEach(function(c) {
+      if (c.status === 'pending') counts.pendientes++;
+      else if (c.status === 'approved') counts.aprobados++;
+      else counts.spam++;
+    });
+    tabBtns.forEach(function(btn) {
+      var t = btn.dataset.target;
+      var badge = btn.querySelector('span:last-child');
+      if (badge && counts[t] !== undefined) badge.textContent = counts[t];
+    });
+  }
+
+  // Global action handler
+  window.crudAction = async function(id, action) {
+    var card = document.querySelector('[data-comment-id="' + id + '"]');
+    var msg = '', icon = 'check_circle';
+    switch (action) {
+      case 'aprobar':
+        await AulaAbiertaDB.updateCommentStatus(id, 'approved');
+        msg = 'Comentario aprobado y publicado.'; break;
+      case 'responder':
+        var reply = prompt('Escribe tu respuesta pedagógica:');
+        if (reply === null) return;
+        await AulaAbiertaDB.updateCommentStatus(id, 'approved', reply);
+        msg = 'Aprobado con respuesta pedagógica.'; icon = 'send'; break;
+      case 'rechazar':
+        await AulaAbiertaDB.updateCommentStatus(id, 'rejected');
+        msg = 'Comentario rechazado.'; icon = 'close'; break;
+      case 'spam':
+        await AulaAbiertaDB.updateCommentStatus(id, 'spam');
+        msg = 'Marcado como spam.'; icon = 'flag'; break;
+      case 'eliminar':
+        await AulaAbiertaDB.deleteComment(id);
+        msg = 'Eliminado permanentemente.'; icon = 'delete'; break;
+    }
+    if (card) { card.classList.add('scale-95','opacity-0'); await new Promise(function(r){setTimeout(r,250)}); }
+    await loadData();
+    showToast(msg, icon);
+  };
+
+  // Override batch approve
+  window.approveAllLegitimate = async function() {
+    var pending = allComments.filter(function(c) { return c.status === 'pending' && !c.isSpamAlert && (c.authorType === 'teacher' || c.authorType === 'family'); });
+    if (pending.length === 0) { showToast('No hay aportes legítimos pendientes.', 'info'); return; }
+    for (var i = 0; i < pending.length; i++) { await AulaAbiertaDB.updateCommentStatus(pending[i].id, 'approved'); }
+    await loadData();
+    showToast(pending.length + ' comentarios aprobados en lote.', 'done_all');
+  };
+
+  // Wire tabs
+  tabBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      currentTab = btn.dataset.target;
+      tabBtns.forEach(function(b) {
+        b.classList.remove('bg-primary-container','text-on-primary','shadow-sm');
+        b.classList.add('bg-surface-container-high','text-on-surface-variant');
+      });
+      btn.classList.add('bg-primary-container','text-on-primary','shadow-sm');
+      btn.classList.remove('bg-surface-container-high','text-on-surface-variant');
+      renderComments();
+    });
+  });
+
+  // Wire search
+  if (searchInput) searchInput.addEventListener('input', function() {
+    searchTerm = searchInput.value.trim().toLowerCase();
+    if (clearBtn) clearBtn.classList.toggle('hidden', !searchTerm);
+    renderComments();
+  });
+  if (clearBtn) clearBtn.addEventListener('click', function() {
+    searchInput.value = ''; searchTerm = '';
+    clearBtn.classList.add('hidden');
+    renderComments();
+  });
+
+  // Wire article filter
+  if (articleFilter) articleFilter.addEventListener('change', function() {
+    articleFilterId = articleFilter.value;
+    renderComments();
+  });
+
+  // Override resetDemo
+  window.resetDemo = function() { location.reload(); };
+
+  await loadData();
+})();
+</script>
 </body></html>

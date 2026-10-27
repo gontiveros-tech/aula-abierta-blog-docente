@@ -445,4 +445,195 @@
     });
   })();
 </script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/95 backdrop-blur-xl shadow-[0_-2px_12px_rgba(15,32,66,0.06)]" data-active-classes="text-primary-container font-semibold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="inicio" href="index.html"><span class="material-symbols-outlined text-[24px]">school</span><span class="font-label-sm text-label-sm">Inicio</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 transition-colors text-primary-container font-semibold" data-path="publicaciones" href="publicaciones.html"><span class="material-symbols-outlined text-[24px]">menu_book</span><span class="font-label-sm text-label-sm">Artículos</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="recursos-didacticos" href="recursos.html"><span class="material-symbols-outlined text-[24px]">folder_open</span><span class="font-label-sm text-label-sm">Recursos</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="actividades-pedagogicas" href="lectura.html"><span class="material-symbols-outlined text-[24px]">extension</span><span class="font-label-sm text-label-sm">Actividades</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="perfil-docente" href="panel.html"><span class="material-symbols-outlined text-[24px]">person_outline</span><span class="font-label-sm text-label-sm">Perfil</span></a></div></nav><script src="db.js"></script>
+<script>
+(function(){
+  const SUBJECT_ICONS = {
+    'Ciencias Naturales': 'water_drop',
+    'Matemáticas': 'calculate',
+    'Lengua Española': 'spellcheck',
+    'Ciencias Sociales': 'history_edu'
+  };
+  const DEFAULT_AVATARS = [
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuBRcaU1a9SehToqHzZoKH7ouhrBm9X7Bqa5fM3mNtthWps-8lRnLR8JET4zDNHgro63e8ockVSyPOjclV1gwgs8ZNZFuZTtqSVISBGzbyrL3RxPEgs5p7LkV6DmYTbITOt6gyZhuZCmPOQuywp52_rqPWWyI7kisA3ca_pC5GOMy178ylUpVsZGUCsEzJAYZ33KPsApqu5dnkysijaXqSg4tmIOBM-QsALU_ZcG1haJBew1TuoPW7U',
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuBfmeAlS2aR6IzVXbTfac1rob4KXjtkhI2Qq5LcFfjPFJb2idRUWqH9zfaif4bQyH6Sqn94iz-c9AW8suzhSt7bSTfHlMfJjh-BCJF7c8DqfWj46sIBAcZQj-rKuq_-mHLzWcpoES9vnjWojs8OgI-Yg93whHeKko1WOU6CvrnaA7lqt81Z5M21OtEFZDtF0IBu6DoUNis0bTxnjAa1eR7Og1mmrMLxRVcbO7ZwLvi5XsNC_7VKfDI',
+    'https://lh3.googleusercontent.com/aida-public/AB6AXuBIHFPMFmW9kBBO8EL_nVT_vtADjQyMleySyvLscGFDC6aRMJAkfSmc4KPjkVHsD-_PXKMjJa_Hy1dj2hiTbkSupgT2M4dKP3UAz4Koh-DBqf9xOzmqYUREw2tJoPKBwU586qR4wvK-HJuj7Ae-UlJclApS9bZhQfTam1zXzmkpmRIamv516-g3GMvm25CICKtJFmpV6Rf9krKaRTkalN3Es6qJyNhp39hz8oS-iJdJq8MqYccTN60'
+  ];
+
+  let allArticles = [];
+  let currentFilter = 'Todas las áreas';
+  let currentSort = 'recientes';
+  let currentSearch = '';
+
+  const cardContainer = document.querySelector('section.px-gutter-mobile.py-space-sm.flex.flex-col.gap-space-lg');
+  const counterEl = document.querySelector('.font-label-sm.text-label-sm.text-on-surface-variant.font-medium');
+  const paginationInfo = document.querySelector('section.px-gutter-mobile.py-space-md p.font-label-sm');
+  const searchInput = document.getElementById('buscar-publicacion');
+  const sortSelect = document.getElementById('selector-orden');
+  const filterChips = document.querySelectorAll('.filtro-chip');
+  const loadMoreBtn = document.getElementById('btn-cargar-mas');
+
+  function formatDate(ts) {
+    return new Date(ts).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  function renderCard(art, idx) {
+    const icon = SUBJECT_ICONS[art.subject] || 'article';
+    const avatar = DEFAULT_AVATARS[idx % DEFAULT_AVATARS.length];
+    const coverImg = art.coverImage || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80';
+    const gradeShort = art.grade || '';
+    return `
+    <article class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_2px_12px_-2px_rgba(15,32,66,0.06)] flex flex-col transition-all duration-200">
+      <div class="relative w-full h-44 bg-surface-container overflow-hidden">
+        <img class="w-full h-full object-cover" src="${coverImg}" alt="${art.coverAlt || art.title}"/>
+        <div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
+          <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary/95 text-on-secondary font-label-sm text-label-sm font-semibold backdrop-blur-xs">
+            <span class="material-symbols-outlined text-[13px]">${icon}</span>
+            ${art.subject}
+          </span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-highest/90 text-on-surface font-label-sm text-label-sm backdrop-blur-xs">
+            ${gradeShort}
+          </span>
+        </div>
+        <button aria-label="Guardar en favoritos" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-surface-container-lowest/90 text-on-surface-variant hover:text-primary flex items-center justify-center backdrop-blur-xs shadow-xs transition-colors" type="button">
+          <span class="material-symbols-outlined text-[20px]">bookmark_border</span>
+        </button>
+      </div>
+      <div class="p-space-lg flex flex-col gap-space-sm">
+        <div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm">
+          <span class="inline-flex items-center gap-1">
+            <span class="material-symbols-outlined text-[14px]">schedule</span>
+            ${art.readTime || 5} min de lectura
+          </span>
+          <span>•</span>
+          <span>${formatDate(art.createdAt)}</span>
+        </div>
+        <h2 class="font-headline-sm text-headline-sm text-primary font-bold leading-snug">${art.title}</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 leading-relaxed">${art.summary || ''}</p>
+        ${art.tags && art.tags.length ? `
+        <div class="flex flex-wrap gap-1.5 pt-1">
+          ${art.tags.slice(0,2).map(t => `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">${t}</span>`).join('')}
+        </div>` : ''}
+        <div class="pt-space-sm flex items-center justify-between mt-1">
+          <div class="flex items-center gap-2">
+            <img class="w-7 h-7 rounded-full object-cover shadow-xs" src="${avatar}" alt="${art.author}"/>
+            <span class="font-label-md text-label-md text-on-surface font-medium">${art.author || 'Docente'}</span>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button aria-label="Compartir este artículo" class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" type="button">
+              <span class="material-symbols-outlined text-[20px]">share</span>
+            </button>
+            <a class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold shadow-xs hover:opacity-95 transition-opacity" href="lectura.html?id=${art.id}">
+              <span>Leer artículo</span>
+              <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </article>`;
+  }
+
+  function getFilteredArticles() {
+    let list = allArticles.slice();
+    // Filter by subject
+    if (currentFilter !== 'Todas las áreas') {
+      if (currentFilter === 'Primaria (4to-6to)') {
+        list = list.filter(a => a.grade && a.grade.toLowerCase().includes('primaria'));
+      } else if (currentFilter === 'Secundaria') {
+        list = list.filter(a => a.grade && a.grade.toLowerCase().includes('secundaria'));
+      } else {
+        list = list.filter(a => a.subject === currentFilter);
+      }
+    }
+    // Filter by search
+    if (currentSearch) {
+      const q = currentSearch.toLowerCase();
+      list = list.filter(a =>
+        (a.title && a.title.toLowerCase().includes(q)) ||
+        (a.summary && a.summary.toLowerCase().includes(q)) ||
+        (a.tags && a.tags.some(t => t.toLowerCase().includes(q))) ||
+        (a.subject && a.subject.toLowerCase().includes(q))
+      );
+    }
+    // Sort
+    if (currentSort === 'recientes') {
+      list.sort((a, b) => b.createdAt - a.createdAt);
+    } else if (currentSort === 'leidos') {
+      list.sort((a, b) => (b.views || 0) - (a.views || 0));
+    }
+    return list;
+  }
+
+  function renderArticles() {
+    const filtered = getFilteredArticles();
+    if (!cardContainer) return;
+    if (filtered.length === 0) {
+      cardContainer.innerHTML = `
+        <div class="flex flex-col items-center justify-center py-12 gap-3 text-center">
+          <span class="material-symbols-outlined text-[48px] text-outline">search_off</span>
+          <p class="font-title-md text-title-md text-on-surface-variant">No se encontraron publicaciones</p>
+          <p class="font-body-sm text-body-sm text-outline">Intenta con otros filtros o términos de búsqueda.</p>
+        </div>`;
+    } else {
+      cardContainer.innerHTML = filtered.map((a, i) => renderCard(a, i)).join('');
+    }
+    // Update counter
+    if (counterEl) counterEl.textContent = filtered.length + ' lectura' + (filtered.length !== 1 ? 's' : '') + ' activa' + (filtered.length !== 1 ? 's' : '');
+    if (paginationInfo) paginationInfo.textContent = 'Mostrando ' + filtered.length + ' de ' + allArticles.length + ' publicaciones didácticas';
+    // Re-bind bookmark buttons
+    cardContainer.querySelectorAll('button[aria-label="Guardar en favoritos"]').forEach(function(btn) {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        var icono = btn.querySelector('.material-symbols-outlined');
+        if (icono) {
+          var isFilled = icono.textContent.trim() === 'bookmark';
+          icono.textContent = isFilled ? 'bookmark_border' : 'bookmark';
+          btn.classList.toggle('text-secondary', !isFilled);
+        }
+      });
+    });
+  }
+
+  // Wire filter chips
+  filterChips.forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      currentFilter = chip.textContent.trim();
+      renderArticles();
+    });
+  });
+
+  // Wire search
+  if (searchInput) {
+    let debounce;
+    searchInput.addEventListener('input', function() {
+      clearTimeout(debounce);
+      debounce = setTimeout(function() {
+        currentSearch = searchInput.value.trim();
+        renderArticles();
+      }, 250);
+    });
+  }
+
+  // Wire sort
+  if (sortSelect) {
+    sortSelect.addEventListener('change', function() {
+      currentSort = sortSelect.value;
+      renderArticles();
+    });
+  }
+
+  // Hide load more (we show all at once from IndexedDB)
+  if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+
+  // Init
+  document.addEventListener('DOMContentLoaded', async function() {
+    try {
+      await window.AulaAbiertaDB._initPromise;
+      allArticles = await window.AulaAbiertaDB.getPublishedArticles();
+      renderArticles();
+    } catch(e) {
+      console.error('Error cargando artículos:', e);
+    }
+  });
+})();
+</script>
 </body></html>

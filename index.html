@@ -373,4 +373,120 @@
     });
   });
 </script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/95 backdrop-blur-xl shadow-[0_-2px_12px_rgba(15,32,66,0.06)]" data-active-classes="text-primary-container font-semibold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 transition-colors text-primary-container font-semibold" data-path="inicio" href="index.html"><span class="material-symbols-outlined text-[24px]">school</span><span class="font-label-sm text-label-sm">Inicio</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="publicaciones" href="publicaciones.html"><span class="material-symbols-outlined text-[24px]">menu_book</span><span class="font-label-sm text-label-sm">Artículos</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="recursos-didacticos" href="recursos.html"><span class="material-symbols-outlined text-[24px]">folder_open</span><span class="font-label-sm text-label-sm">Recursos</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="actividades-pedagogicas" href="lectura.html"><span class="material-symbols-outlined text-[24px]">extension</span><span class="font-label-sm text-label-sm">Actividades</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="perfil-docente" href="panel.html"><span class="material-symbols-outlined text-[24px]">person_outline</span><span class="font-label-sm text-label-sm">Perfil</span></a></div></nav><script src="db.js"></script>
+<script>
+// === CRUD DINÁMICO: INDEX.HTML ===
+document.addEventListener('DOMContentLoaded', async () => {
+  await AulaAbiertaDB._initPromise;
+  const articles = await AulaAbiertaDB.getPublishedArticles();
+  const allArticles = await AulaAbiertaDB.getAll('articles');
+
+  // --- Helper: formatear fecha ---
+  function fmtDate(ts) {
+    return new Date(ts).toLocaleDateString('es-DO', { day: 'numeric', month: 'short' });
+  }
+
+  // --- 1. HERO CARD (primer artículo publicado) ---
+  const heroSection = document.querySelector('section.px-gutter-mobile.py-space-sm article.group');
+  if (heroSection && articles.length > 0) {
+    const hero = articles[0];
+    const img = heroSection.querySelector('img');
+    if (img && hero.coverImage) { img.src = hero.coverImage; img.setAttribute('data-alt', hero.coverAlt || ''); }
+    const subjectBadge = heroSection.querySelector('.bg-secondary-fixed');
+    if (subjectBadge) subjectBadge.textContent = hero.subject || '';
+    const timeBadge = heroSection.querySelector('.bg-primary\\/80');
+    if (timeBadge) timeBadge.innerHTML = '<span class="material-symbols-outlined text-[14px]">schedule</span> ' + (hero.readTime || 5) + ' min lectura';
+    const gradeSpan = heroSection.querySelector('.flex.items-center.gap-2.text-on-surface-variant span:first-child');
+    if (gradeSpan) gradeSpan.innerHTML = '<span class="material-symbols-outlined text-[15px]">school</span> ' + (hero.grade || '');
+    const title = heroSection.querySelector('h4');
+    if (title) title.textContent = hero.title;
+    const summary = heroSection.querySelector('p.line-clamp-2');
+    if (summary) summary.textContent = hero.summary || '';
+    const readLink = heroSection.querySelector('a[href]');
+    if (readLink) readLink.href = 'lectura.html?id=' + hero.id;
+  }
+
+  // --- 2. ÚLTIMAS PUBLICACIONES (artículos 2, 3, 4) ---
+  const latestSection = document.querySelector('section:has(h3:last-of-type)');
+  const latestContainer = document.querySelectorAll('section.px-gutter-mobile.py-space-sm');
+  let pubSection = null;
+  latestContainer.forEach(s => {
+    const h3 = s.querySelector('h3');
+    if (h3 && h3.textContent.includes('Últimas Publicaciones')) pubSection = s;
+  });
+  if (pubSection) {
+    const cardContainer = pubSection.querySelector('.flex.flex-col.gap-space-xs');
+    if (cardContainer && articles.length > 1) {
+      const remaining = articles.slice(1, 4);
+      const subjectStyles = {
+        'Ciencias Naturales': { bg: 'bg-tertiary-fixed', text: 'text-on-tertiary-fixed' },
+        'Matemáticas': { bg: 'bg-secondary-fixed', text: 'text-on-secondary-fixed-variant' },
+        'Lengua Española': { bg: 'bg-primary-fixed', text: 'text-on-primary-fixed' },
+        'Ciencias Sociales': { bg: 'bg-secondary-container', text: 'text-on-secondary-container' }
+      };
+      cardContainer.innerHTML = remaining.map(art => {
+        const style = subjectStyles[art.subject] || subjectStyles['Ciencias Naturales'];
+        return `
+        <article class="bg-surface-container-lowest p-space-sm rounded-xl shadow-sm hover:shadow-md transition-all flex gap-space-sm items-start">
+          <div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container">
+            <img class="w-full h-full object-cover" src="${art.coverImage || ''}" alt="${art.coverAlt || art.title}"/>
+          </div>
+          <div class="flex flex-col justify-between flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="${style.bg} ${style.text} font-label-sm text-label-sm px-2 py-0.5 rounded-full font-semibold">${art.grade || ''}</span>
+              <span class="font-label-sm text-label-sm text-on-surface-variant">${fmtDate(art.createdAt)}</span>
+            </div>
+            <a class="font-title-md text-body-md font-bold text-primary hover:text-secondary transition-colors line-clamp-2 mt-0.5" href="lectura.html?id=${art.id}">
+              ${art.title}
+            </a>
+            <div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm mt-1">
+              <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">timer</span> ${art.readTime || 5} min lectura</span>
+              <button aria-label="Guardar artículo" class="text-on-surface-variant hover:text-primary" type="button">
+                <span class="material-symbols-outlined text-[16px]">bookmark_border</span>
+              </button>
+            </div>
+          </div>
+        </article>`;
+      }).join('');
+
+      // Re-bind bookmark buttons
+      cardContainer.querySelectorAll('button[aria-label^="Guardar"]').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+          e.preventDefault();
+          const icon = this.querySelector('.material-symbols-outlined');
+          if (icon) {
+            icon.innerText = icon.innerText === 'bookmark_border' ? 'bookmark' : 'bookmark_border';
+            icon.classList.toggle('text-secondary');
+          }
+        });
+      });
+    }
+
+    // Update "Ver repositorio" link
+    const repoLink = pubSection.querySelector('a[href="#"]');
+    if (repoLink && repoLink.textContent.includes('Ver repositorio')) {
+      repoLink.href = 'publicaciones.html';
+    }
+  }
+
+  // --- 3. ÁREAS CURRICULARES (conteos dinámicos) ---
+  const subjects = ['Ciencias Naturales', 'Matemáticas', 'Lengua Española', 'Ciencias Sociales'];
+  const subjectLabels = { 'Ciencias Naturales': 'publicaciones', 'Matemáticas': 'secuencias', 'Lengua Española': 'lecturas', 'Ciencias Sociales': 'investigaciones' };
+  const areasSection = document.getElementById('areas-curriculares');
+  if (areasSection) {
+    const areaCards = areasSection.querySelectorAll('.grid a');
+    areaCards.forEach((card, i) => {
+      if (i < subjects.length) {
+        const subj = subjects[i];
+        const count = allArticles.filter(a => a.subject === subj).length;
+        const countSpan = card.querySelector('.font-label-sm.text-label-sm.text-on-surface-variant');
+        if (countSpan) countSpan.textContent = count + ' ' + subjectLabels[subj];
+        card.href = 'publicaciones.html?subject=' + encodeURIComponent(subj);
+      }
+    });
+    // "Ver todas" link
+    const verTodasLink = areasSection.querySelector('a[href="#"]');
+    if (verTodasLink) verTodasLink.href = 'publicaciones.html';
+  }
+});
+</script>
 </body></html>

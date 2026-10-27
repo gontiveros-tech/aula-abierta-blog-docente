@@ -502,4 +502,217 @@
     }
   </script>
 </div></main><script src="db.js"></script>
+<script>
+(function(){
+  const SUBJECT_ICONS = {
+    'Ciencias Naturales': 'water_drop',
+    'Matemáticas': 'calculate',
+    'Lengua Española': 'spellcheck',
+    'Ciencias Sociales': 'history_edu'
+  };
+
+  function formatDate(ts) {
+    return new Date(ts).toLocaleDateString('es-DO', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  function getInitials(name) {
+    return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+  }
+
+  function renderComment(c) {
+    const initials = getInitials(c.authorName || 'AN');
+    const bgClass = c.authorType === 'teacher' ? 'bg-secondary-container text-on-secondary-container' : 'bg-surface-container-highest text-primary';
+    const dateStr = formatDate(c.createdAt);
+    const schoolLine = c.schoolInfo ? ' · ' + c.schoolInfo : '';
+    const badgeLabel = c.authorBadge || '';
+    let replyHtml = '';
+    if (c.teacherReply) {
+      replyHtml = `
+      <div class="ml-4 p-3 rounded-lg bg-surface-container-low flex flex-col gap-1.5">
+        <div class="flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[16px] text-secondary">reply</span>
+          <span class="font-label-sm text-label-sm font-bold text-primary">Respuesta del docente</span>
+          <span class="px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-label-sm text-[10px]">Docente</span>
+        </div>
+        <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">${c.teacherReply}</p>
+      </div>`;
+    }
+    return `
+    <div class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-2.5">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-7 h-7 rounded-full ${bgClass} flex items-center justify-center font-bold text-label-sm">${initials}</span>
+          <span class="font-title-md text-title-md text-primary font-bold leading-none">${c.authorName}${badgeLabel ? ' (' + badgeLabel + ')' : ''}</span>
+        </div>
+        <span class="font-label-sm text-label-sm text-on-surface-variant">${dateStr}${schoolLine}</span>
+      </div>
+      <p class="font-body-sm text-body-sm text-on-surface leading-relaxed">${c.content}</p>
+      ${replyHtml}
+    </div>`;
+  }
+
+  function renderRelatedCard(art) {
+    const icon = SUBJECT_ICONS[art.subject] || 'article';
+    const coverImg = art.coverImage || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80';
+    return `
+    <a class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-2 hover:bg-surface-container-high transition-colors" href="lectura.html?id=${art.id}">
+      <div class="relative w-full rounded-lg overflow-hidden aspect-[16/9] bg-surface-container">
+        <img class="w-full h-full object-cover" src="${coverImg}" alt="${art.coverAlt || art.title}"/>
+      </div>
+      <span class="font-label-sm text-label-sm text-secondary font-bold">${art.subject || ''}</span>
+      <h4 class="font-title-md text-title-md text-primary font-bold line-clamp-2">${art.title}</h4>
+      <span class="font-label-sm text-label-sm text-on-surface-variant">${art.readTime || 5} min de lectura · ${art.author || 'Docente'}</span>
+    </a>`;
+  }
+
+  async function loadArticle() {
+    const params = new URLSearchParams(window.location.search);
+    const articleId = params.get('id');
+    if (!articleId) {
+      document.querySelector('article').innerHTML = `
+        <div class="flex flex-col items-center justify-center py-16 gap-4 text-center px-gutter-mobile">
+          <span class="material-symbols-outlined text-[56px] text-outline">article</span>
+          <h1 class="font-headline-md-mobile text-headline-md-mobile text-primary font-bold">Artículo no encontrado</h1>
+          <p class="font-body-md text-body-md text-on-surface-variant">No se especificó un artículo para leer.</p>
+          <a class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md font-bold" href="publicaciones.html">Ver publicaciones</a>
+        </div>`;
+      return;
+    }
+
+    try {
+      await window.AulaAbiertaDB._initPromise;
+      const art = await window.AulaAbiertaDB.getArticleById(articleId);
+
+      if (!art) {
+        document.querySelector('article').innerHTML = `
+          <div class="flex flex-col items-center justify-center py-16 gap-4 text-center px-gutter-mobile">
+            <span class="material-symbols-outlined text-[56px] text-outline">search_off</span>
+            <h1 class="font-headline-md-mobile text-headline-md-mobile text-primary font-bold">Artículo no encontrado</h1>
+            <p class="font-body-md text-body-md text-on-surface-variant">El artículo solicitado no existe o fue eliminado.</p>
+            <a class="px-4 py-2 rounded-lg bg-primary text-on-primary font-label-md font-bold" href="publicaciones.html">Ver publicaciones</a>
+          </div>`;
+        return;
+      }
+
+      // Populate breadcrumb
+      const breadcrumb = document.querySelector('.inline-flex.items-center.gap-1\\.5.px-2\\.5.py-0\\.5.rounded-full.bg-surface-container-high');
+      if (breadcrumb) breadcrumb.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span> ${art.subject || ''} · ${art.grade || ''}`;
+
+      // Title
+      const h1 = document.querySelector('h1');
+      if (h1) h1.textContent = art.title;
+
+      // Summary
+      const summary = document.querySelector('article p.italic');
+      if (summary) summary.textContent = art.summary || '';
+
+      // Read time
+      const readTimeEl = document.querySelector('#btn-audio-listen')?.closest('.flex.items-center.gap-2')?.previousElementSibling;
+      const scheduleSpans = document.querySelectorAll('.material-symbols-outlined');
+      scheduleSpans.forEach(s => {
+        if (s.textContent.trim() === 'schedule' && s.closest('.flex.items-center.gap-1')) {
+          s.parentElement.innerHTML = `<span class="material-symbols-outlined text-[15px]">schedule</span> ${art.readTime || 5} min de lectura`;
+        }
+      });
+
+      // Author info
+      const authorName = document.querySelector('.font-title-md.text-title-md.text-primary.font-bold.leading-none');
+      if (authorName) authorName.textContent = art.author || 'Docente';
+
+      const authorMeta = document.querySelector('.font-label-sm.text-label-sm.text-on-surface-variant.mt-1');
+      if (authorMeta) authorMeta.textContent = (art.role || 'Educador') + ' · ' + formatDate(art.createdAt);
+
+      // Cover image
+      const heroImg = document.querySelector('.aspect-\\[16\\/10\\] img');
+      if (heroImg && art.coverImage) {
+        heroImg.src = art.coverImage;
+        if (art.coverAlt) heroImg.setAttribute('data-alt', art.coverAlt);
+      }
+
+      // Article body content
+      const bodyEl = document.getElementById('article-body-content');
+      if (bodyEl && art.content) {
+        bodyEl.innerHTML = art.content;
+      }
+
+      // Tags - add below body if present
+      if (art.tags && art.tags.length && bodyEl) {
+        const tagsHtml = `<div class="flex flex-wrap gap-2 pt-2">${art.tags.map(t => `<span class="px-3 py-1 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">${t}</span>`).join('')}</div>`;
+        bodyEl.insertAdjacentHTML('afterend', tagsHtml);
+      }
+
+      // Load comments
+      const comments = await window.AulaAbiertaDB.getCommentsByArticle(articleId, true);
+      const commentCountEl = document.querySelector('.px-2.py-0\\.5.rounded-full.bg-surface-container-high.text-primary.font-label-sm');
+      if (commentCountEl) commentCountEl.textContent = comments.length;
+
+      const commentsContainer = document.querySelector('.flex.flex-col.gap-3.pt-1');
+      if (commentsContainer) {
+        if (comments.length > 0) {
+          commentsContainer.innerHTML = comments.map(renderComment).join('');
+        } else {
+          commentsContainer.innerHTML = `
+            <div class="p-4 text-center text-on-surface-variant font-body-sm">
+              <span class="material-symbols-outlined text-[32px] text-outline block mb-2">forum</span>
+              Aún no hay comentarios aprobados. ¡Sé el primero en aportar!
+            </div>`;
+        }
+      }
+
+      // Wire comment form
+      window.handleCommentSubmit = async function(event) {
+        event.preventDefault();
+        const input = document.getElementById('comment-text');
+        if (!input.value.trim()) return;
+        try {
+          await window.AulaAbiertaDB.addComment({
+            articleId: articleId,
+            authorName: 'Docente Visitante',
+            authorType: 'guest',
+            content: input.value.trim()
+          });
+          input.value = '';
+          // Show pending message
+          const form = input.closest('form');
+          const msg = document.createElement('div');
+          msg.className = 'p-2.5 rounded-lg bg-tertiary/10 text-tertiary font-label-sm text-label-sm flex items-center gap-2';
+          msg.innerHTML = '<span class="material-symbols-outlined text-[16px]">hourglass_top</span> ¡Gracias por tu aporte pedagógico! Tu comentario está pendiente de moderación docente.';
+          form.after(msg);
+          setTimeout(() => msg.remove(), 5000);
+        } catch(e) {
+          console.error('Error al enviar comentario:', e);
+          alert('Error al enviar el comentario. Intenta de nuevo.');
+        }
+      };
+
+      // Related articles
+      const allPublished = await window.AulaAbiertaDB.getPublishedArticles();
+      const related = allPublished.filter(a => a.id !== articleId);
+      const sameSubject = related.filter(a => a.subject === art.subject);
+      const relatedToShow = sameSubject.length >= 2 ? sameSubject.slice(0, 2) : related.slice(0, 2);
+
+      const relatedGrid = document.querySelector('.grid.grid-cols-1.sm\\:grid-cols-2.gap-3');
+      if (relatedGrid && relatedToShow.length > 0) {
+        relatedGrid.innerHTML = relatedToShow.map(renderRelatedCard).join('');
+      } else if (relatedGrid) {
+        relatedGrid.innerHTML = '<p class="font-body-sm text-on-surface-variant col-span-2 text-center py-4">No hay lecturas relacionadas disponibles aún.</p>';
+      }
+
+      // Increment view count
+      if (typeof window.AulaAbiertaDB.updateArticle === 'function') {
+        window.AulaAbiertaDB.updateArticle(articleId, { views: (art.views || 0) + 1 }).catch(() => {});
+      }
+
+    } catch(e) {
+      console.error('Error cargando artículo:', e);
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadArticle);
+  } else {
+    loadArticle();
+  }
+})();
+</script>
 </body></html>

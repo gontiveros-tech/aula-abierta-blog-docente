@@ -324,4 +324,323 @@
 </button>
 </div>
 </div></main><script src="db.js"></script>
+<script>
+(function() {
+  // === DOM References ===
+  const titleInput = document.getElementById('article-title');
+  const summaryInput = document.getElementById('article-subtitle');
+  const subjectSelect = document.getElementById('subject-select');
+  const gradeSelect = document.getElementById('grade-select');
+  const coverAltInput = document.getElementById('cover-alt');
+  const readTimeInput = document.querySelector('input[type="number"]');
+  const coverImg = document.querySelector('.relative.w-full.h-44 img');
+  const coverLabel = document.querySelector('.relative.w-full.h-44 .bg-primary\\/60');
+
+  // Content area — the editable body
+  const contentArea = document.querySelector('main .flex.flex-col.gap-space-md.font-body-md');
+  if (contentArea) contentArea.setAttribute('contenteditable', 'true');
+
+  // Tags container
+  const tagsContainer = document.querySelector('.flex.flex-wrap.gap-1\\.5');
+
+  // Status segmented buttons
+  const statusBtns = document.querySelectorAll('.grid.grid-cols-3 button');
+  const statusMap = ['draft', 'scheduled', 'published'];
+  let currentStatus = 'draft';
+
+  // Top action buttons
+  const topBtns = document.querySelectorAll('header ~ main .bg-surface-container-low .flex.items-center.gap-space-xs button');
+  const saveDraftBtn = topBtns[0]; // "Borrador"
+  const publishTopBtn = topBtns[1]; // "Publicar"
+
+  // Bottom buttons
+  const bottomBtns = document.querySelectorAll('.px-gutter-mobile.pt-space-lg.flex button');
+  const previewBtn = bottomBtns[0];
+  const publishBottomBtn = bottomBtns[1];
+
+  // Toggles
+  const toggleInputs = document.querySelectorAll('.bg-surface-container-lowest input[type="checkbox"]');
+  const commentsToggle = toggleInputs[0];
+  const featuredToggle = toggleInputs[1];
+
+  // Auto-save indicator
+  const autoSaveLabel = document.querySelector('.animate-pulse + .font-label-sm');
+  const autoSaveDot = document.querySelector('.animate-pulse');
+
+  // === State ===
+  let editingArticle = null;
+  const urlParams = new URLSearchParams(window.location.search);
+  const editId = urlParams.get('id');
+
+  // === Status Segmented Control ===
+  statusBtns.forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      statusBtns.forEach(b => {
+        b.classList.remove('bg-surface-container-lowest', 'text-primary', 'shadow-sm', 'font-semibold');
+        b.classList.add('text-on-surface-variant');
+      });
+      btn.classList.add('bg-surface-container-lowest', 'text-primary', 'shadow-sm', 'font-semibold');
+      btn.classList.remove('text-on-surface-variant');
+      currentStatus = statusMap[idx];
+    });
+  });
+
+  // === Tags Management ===
+  function getTags() {
+    const chips = tagsContainer.querySelectorAll('span.inline-flex');
+    return Array.from(chips).map(chip => {
+      const text = chip.childNodes[0].textContent.trim().replace(/^#/, '');
+      return text;
+    });
+  }
+
+  function renderTags(tags) {
+    // Remove existing chips but keep the "Añadir" button
+    const addBtn = tagsContainer.querySelector('button');
+    tagsContainer.innerHTML = '';
+    tags.forEach(tag => {
+      const chip = document.createElement('span');
+      chip.className = 'inline-flex items-center gap-1 px-2.5 py-1 bg-secondary-fixed text-on-secondary-fixed-variant rounded-full font-label-md text-label-md';
+      chip.innerHTML = `#${tag} <button aria-label="Eliminar etiqueta" class="hover:text-error leading-none" type="button"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
+      chip.querySelector('button').addEventListener('click', () => {
+        chip.remove();
+      });
+      tagsContainer.appendChild(chip);
+    });
+    // Re-add the "Añadir" button
+    const newAddBtn = document.createElement('button');
+    newAddBtn.className = 'inline-flex items-center gap-1 px-2.5 py-1 bg-surface-container text-primary rounded-full font-label-md text-label-md hover:bg-surface-container-high transition-colors';
+    newAddBtn.type = 'button';
+    newAddBtn.innerHTML = '<span class="material-symbols-outlined text-[14px]">add</span><span>Añadir</span>';
+    newAddBtn.addEventListener('click', addTagPrompt);
+    tagsContainer.appendChild(newAddBtn);
+  }
+
+  function addTagPrompt() {
+    const tag = prompt('Escriba el nuevo descriptor temático:');
+    if (tag && tag.trim()) {
+      const currentTags = getTags();
+      currentTags.push(tag.trim());
+      renderTags(currentTags);
+    }
+  }
+
+  // Wire existing tag remove buttons
+  tagsContainer.querySelectorAll('span.inline-flex button').forEach(btn => {
+    btn.addEventListener('click', () => btn.parentElement.remove());
+  });
+  // Wire existing add button
+  const existingAddBtn = tagsContainer.querySelector('button.bg-surface-container');
+  if (existingAddBtn) existingAddBtn.addEventListener('click', addTagPrompt);
+
+  // === Rich Editor Toolbar ===
+  const toolbar = document.querySelector('.sticky.top-16 .flex.items-center');
+  if (toolbar) {
+    const buttons = toolbar.querySelectorAll('button');
+    buttons.forEach(btn => {
+      const label = btn.getAttribute('aria-label') || '';
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!contentArea) return;
+        contentArea.focus();
+        if (label === 'Negrita') document.execCommand('bold', false);
+        else if (label === 'Cursiva') document.execCommand('italic', false);
+        else if (label === 'Encabezado H2') document.execCommand('formatBlock', false, 'h2');
+        else if (label === 'Encabezado H3') document.execCommand('formatBlock', false, 'h3');
+        else if (label === 'Lista con viñetas') document.execCommand('insertUnorderedList', false);
+        else if (label === 'Lista numerada') document.execCommand('insertOrderedList', false);
+        else if (label === 'Cita pedagógica') document.execCommand('formatBlock', false, 'blockquote');
+      });
+    });
+  }
+
+  // === Collect Form Data ===
+  function collectArticleData() {
+    const data = {
+      title: titleInput.value.trim(),
+      summary: summaryInput.value.trim(),
+      subject: subjectSelect.value,
+      grade: gradeSelect.value,
+      readTime: parseInt(readTimeInput.value) || 5,
+      status: currentStatus,
+      coverImage: coverImg ? coverImg.src : '',
+      coverAlt: coverAltInput.value.trim(),
+      author: 'Lic. Ramona Almonte',
+      role: 'Especialista en Didáctica',
+      content: contentArea ? contentArea.innerHTML : '',
+      tags: getTags(),
+      allowComments: commentsToggle ? commentsToggle.checked : true,
+      featured: featuredToggle ? featuredToggle.checked : false
+    };
+    if (editingArticle) {
+      data.id = editingArticle.id;
+      data.createdAt = editingArticle.createdAt;
+      data.views = editingArticle.views || 0;
+    }
+    return data;
+  }
+
+  // === Save ===
+  async function saveArticle(forceStatus) {
+    const data = collectArticleData();
+    if (forceStatus) data.status = forceStatus;
+    if (!data.title) {
+      showToast('Por favor escriba un título para la publicación.', 'error');
+      titleInput.focus();
+      return;
+    }
+    try {
+      await window.AulaAbiertaDB.saveArticle(data);
+      const msg = data.status === 'published' ? '¡Artículo publicado exitosamente!'
+                : data.status === 'scheduled' ? 'Artículo programado correctamente.'
+                : 'Borrador guardado.';
+      showToast(msg, 'success');
+      setTimeout(() => {
+        window.location.href = 'gestion.html?saved=1';
+      }, 1000);
+    } catch (err) {
+      console.error('Error al guardar:', err);
+      showToast('Error al guardar el artículo. Intente nuevamente.', 'error');
+    }
+  }
+
+  // === Wire Save Buttons ===
+  if (saveDraftBtn) saveDraftBtn.addEventListener('click', () => saveArticle('draft'));
+  if (publishTopBtn) publishTopBtn.addEventListener('click', () => saveArticle('published'));
+  if (publishBottomBtn) publishBottomBtn.addEventListener('click', () => saveArticle('published'));
+
+  // Preview button — save as draft first, then open reading view
+  if (previewBtn) previewBtn.addEventListener('click', async () => {
+    const data = collectArticleData();
+    if (!data.title) { showToast('Escriba un título primero.', 'error'); return; }
+    if (!data.status || data.status === 'published') data.status = 'draft';
+    const saved = await window.AulaAbiertaDB.saveArticle(data);
+    window.location.href = 'lectura.html?id=' + saved.id;
+  });
+
+  // === Auto-Save (every 30s) ===
+  let autoSaveTimer = null;
+  function startAutoSave() {
+    autoSaveTimer = setInterval(async () => {
+      const data = collectArticleData();
+      if (!data.title && !data.content) return;
+      if (!data.status || data.status === 'published') data.status = 'draft';
+      try {
+        const saved = await window.AulaAbiertaDB.saveArticle(data);
+        if (!editingArticle) editingArticle = saved; // preserve id for future saves
+        updateAutoSaveLabel('Guardado aut. ahora');
+      } catch (e) { /* silent */ }
+    }, 30000);
+  }
+
+  function updateAutoSaveLabel(text) {
+    if (autoSaveLabel) autoSaveLabel.textContent = text;
+  }
+
+  // === Toast Notification ===
+  function showToast(message, type) {
+    let toast = document.getElementById('editor-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'editor-toast';
+      toast.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 z-[100] px-4 py-3 rounded-xl shadow-lg font-label-lg text-label-lg transition-all duration-300 max-w-[90vw] text-center';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.className = toast.className.replace(/bg-\S+/g, '').replace(/text-\S+/g, '');
+    if (type === 'error') {
+      toast.classList.add('bg-error-container', 'text-on-error-container');
+    } else {
+      toast.classList.add('bg-primary-container', 'text-on-primary');
+    }
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateX(-50%) translateY(0)';
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(20px)';
+    }, 3000);
+  }
+
+  // === Load Article for Editing ===
+  async function loadArticleForEdit(id) {
+    try {
+      const art = await window.AulaAbiertaDB.getArticleById(id);
+      if (!art) {
+        showToast('Artículo no encontrado.', 'error');
+        return;
+      }
+      editingArticle = art;
+
+      // Populate fields
+      titleInput.value = art.title || '';
+      summaryInput.value = art.summary || '';
+      subjectSelect.value = art.subject || 'Ciencias Naturales';
+      gradeSelect.value = art.grade || '5to Primaria';
+      readTimeInput.value = art.readTime || 5;
+      coverAltInput.value = art.coverAlt || '';
+
+      if (art.coverImage && coverImg) {
+        coverImg.src = art.coverImage;
+      }
+      if (coverLabel && art.title) {
+        coverLabel.textContent = 'Portada activa: ' + art.title.substring(0, 40);
+      }
+
+      if (art.content && contentArea) {
+        contentArea.innerHTML = art.content;
+      }
+
+      if (art.tags && art.tags.length) {
+        renderTags(art.tags);
+      }
+
+      // Set status
+      const statusIdx = statusMap.indexOf(art.status);
+      if (statusIdx >= 0) {
+        statusBtns[statusIdx].click();
+      }
+
+      // Set toggles
+      if (commentsToggle && art.allowComments !== undefined) commentsToggle.checked = art.allowComments;
+      if (featuredToggle && art.featured !== undefined) featuredToggle.checked = art.featured;
+
+      // Update page title
+      document.querySelector('h1.font-headline-sm').textContent = 'Editar Artículo';
+
+    } catch (err) {
+      console.error('Error cargando artículo:', err);
+      showToast('Error al cargar el artículo.', 'error');
+    }
+  }
+
+  // === Init ===
+  async function init() {
+    await window.AulaAbiertaDB._initPromise;
+    if (editId) {
+      await loadArticleForEdit(editId);
+    } else {
+      // New article — clear hardcoded values
+      titleInput.value = '';
+      summaryInput.value = '';
+      coverAltInput.value = '';
+      readTimeInput.value = 5;
+      if (contentArea) contentArea.innerHTML = '<p>Escriba el contenido de su artículo aquí...</p>';
+      renderTags([]);
+    }
+    startAutoSave();
+  }
+
+  // Wire "Salir" button
+  const exitBtn = document.querySelector('button .font-label-md');
+  if (exitBtn && exitBtn.textContent.trim() === 'Salir') {
+    exitBtn.closest('button').addEventListener('click', () => {
+      if (confirm('¿Desea salir sin guardar los cambios?')) {
+        window.location.href = 'gestion.html';
+      }
+    });
+  }
+
+  init();
+})();
+</script>
 </body></html>

@@ -341,4 +341,185 @@
     });
   </script>
 </div></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(15,32,66,0.06)]" data-active-classes="text-secondary font-semibold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center w-14 h-14 transition-colors text-secondary font-semibold" data-path="panel" href="panel.html"><span class="material-symbols-outlined text-[22px]">dashboard</span><span class="font-label-sm text-label-sm mt-0.5">Panel</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="articulos" href="gestion.html"><span class="material-symbols-outlined text-[22px]">article</span><span class="font-label-sm text-label-sm mt-0.5">Artículos</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="editor" href="editor.html"><div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-on-primary shadow-[0_2px_6px_rgba(15,32,66,0.2)]"><span class="material-symbols-outlined text-[20px]">edit_note</span></div></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="multimedia" href="biblioteca.html"><span class="material-symbols-outlined text-[22px]">photo_library</span><span class="font-label-sm text-label-sm mt-0.5">Medios</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors relative" data-path="moderacion" href="moderacion.html"><span class="material-symbols-outlined text-[22px]">rate_review</span><span class="font-label-sm text-label-sm mt-0.5">Moderación</span><span class="absolute top-1.5 right-2.5 w-1.5 h-1.5 rounded-full bg-error"></span></a></div></nav><script src="db.js"></script>
+<script>
+// === CRUD DINÁMICO: PANEL.HTML ===
+document.addEventListener('DOMContentLoaded', async () => {
+  await AulaAbiertaDB._initPromise;
+  const articles = await AulaAbiertaDB.getAll('articles');
+  const comments = await AulaAbiertaDB.getAll('comments');
+
+  const published = articles.filter(a => a.status === 'published');
+  const drafts = articles.filter(a => a.status === 'draft');
+  const pendingComments = comments.filter(c => c.status === 'pending');
+  const totalViews = articles.reduce((sum, a) => sum + (a.views || 0), 0);
+
+  // --- 1. MÉTRICAS (4 cards) ---
+  const metricCards = document.querySelectorAll('.grid.grid-cols-2.gap-3 > div');
+
+  // Métrica 1: Publicaciones activas
+  if (metricCards[0]) {
+    const num = metricCards[0].querySelector('.font-headline-md-mobile');
+    if (num) num.textContent = published.length;
+    const badge = metricCards[0].querySelector('.rounded-full.bg-secondary-fixed');
+    if (badge) {
+      const thisMonth = published.filter(a => {
+        const d = new Date(a.createdAt);
+        const now = new Date();
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+      badge.textContent = thisMonth > 0 ? ('+' + thisMonth + ' este mes') : 'Al día';
+    }
+  }
+
+  // Métrica 3: Comentarios en espera
+  if (metricCards[2]) {
+    const num = metricCards[2].querySelector('.font-headline-md-mobile');
+    if (num) {
+      num.textContent = pendingComments.length;
+      num.className = num.className.replace('text-error', pendingComments.length > 0 ? 'text-error' : 'text-on-tertiary-container');
+    }
+    const badge = metricCards[2].querySelector('.rounded-full.bg-error-container');
+    if (badge) badge.textContent = pendingComments.length > 0 ? 'Urgente' : 'Sin pendientes';
+  }
+
+  // Métrica 4: Lecturas totales
+  if (metricCards[3]) {
+    const num = metricCards[3].querySelector('.font-headline-md-mobile');
+    if (num) {
+      if (totalViews >= 1000) {
+        num.textContent = (totalViews / 1000).toFixed(1) + 'k';
+      } else {
+        num.textContent = totalViews;
+      }
+    }
+  }
+
+  // --- 2. ACCIONES RÁPIDAS ---
+  const quickBtns = document.querySelectorAll('.overflow-x-auto button, .overflow-x-auto a');
+  quickBtns.forEach(btn => {
+    const label = btn.textContent.trim();
+    if (label.includes('Redactar Artículo')) {
+      // Convert button to link behavior
+      btn.addEventListener('click', () => { window.location.href = 'editor.html'; });
+    } else if (label.includes('Ver Blog')) {
+      btn.href = 'index.html';
+    } else if (label.includes('Medios')) {
+      btn.addEventListener('click', () => { window.location.href = 'biblioteca.html'; });
+    }
+  });
+
+  // --- 3. ATENCIÓN REQUERIDA ---
+  // Moderación card: update count & wire button
+  const attentionCards = document.querySelectorAll('.px-gutter-mobile.pb-space-md .rounded-xl.bg-surface-container-lowest');
+  if (attentionCards[0]) {
+    const titleSpan = attentionCards[0].querySelector('.font-title-md');
+    if (titleSpan) titleSpan.textContent = pendingComments.length + ' comentarios por revisar';
+    const moderarBtn = attentionCards[0].querySelector('button');
+    if (moderarBtn) moderarBtn.addEventListener('click', () => { window.location.href = 'moderacion.html'; });
+    // Update pending badge
+    const taskBadge = document.querySelector('.rounded-full.bg-primary-container.text-on-primary.font-label-sm');
+    if (taskBadge) {
+      const taskCount = (pendingComments.length > 0 ? 1 : 0) + (drafts.length > 0 ? 1 : 0);
+      taskBadge.textContent = taskCount + ' tareas';
+    }
+  }
+
+  // Draft card: wire "Continuar edición" to first draft
+  if (attentionCards[1] && drafts.length > 0) {
+    const firstDraft = drafts[0];
+    const draftTitle = attentionCards[1].querySelector('.font-title-md.text-title-md.text-on-surface');
+    if (draftTitle) draftTitle.textContent = firstDraft.title;
+    const editBtn = attentionCards[1].querySelector('button');
+    if (editBtn) editBtn.addEventListener('click', () => { window.location.href = 'editor.html?id=' + firstDraft.id; });
+  } else if (attentionCards[1] && drafts.length === 0) {
+    attentionCards[1].style.display = 'none';
+  }
+
+  // --- 4. IMPACTO POR ASIGNATURA ---
+  const subjects = ['Ciencias Naturales', 'Matemáticas', 'Lengua Española', 'Ciencias Sociales'];
+  const subjectCounts = {};
+  let totalPub = published.length || 1; // avoid div by 0
+  subjects.forEach(s => { subjectCounts[s] = published.filter(a => a.subject === s).length; });
+
+  // Update bar segments
+  const barSegments = document.querySelectorAll('.w-full.h-3.rounded-full > div');
+  const barColors = ['bg-secondary', 'bg-primary-container', 'bg-on-tertiary-container', 'bg-secondary-fixed-dim'];
+  barSegments.forEach((seg, i) => {
+    if (i < subjects.length) {
+      const pct = Math.round((subjectCounts[subjects[i]] / totalPub) * 100);
+      seg.style.width = pct + '%';
+      seg.title = subjects[i] + ' ' + pct + '%';
+    }
+  });
+
+  // Update legend percentages
+  const legendItems = document.querySelectorAll('.grid.grid-cols-2.gap-y-2 > div');
+  legendItems.forEach((item, i) => {
+    if (i < subjects.length) {
+      const pctSpan = item.querySelector('.font-label-md.text-label-md');
+      if (pctSpan) pctSpan.textContent = Math.round((subjectCounts[subjects[i]] / totalPub) * 100) + '%';
+    }
+  });
+
+  // --- 5. ACTIVIDAD RECIENTE ---
+  const activityContainer = document.querySelector('.rounded-xl.bg-surface-container-lowest.shadow-\\[0_2px_8px_-2px_rgba\\(15\\,32\\,66\\,0\\.06\\)\\].overflow-hidden');
+  if (activityContainer) {
+    // Combine articles and comments, sort by createdAt desc, take 3
+    const allEvents = [];
+    articles.forEach(a => allEvents.push({ type: 'article', data: a }));
+    comments.forEach(c => allEvents.push({ type: 'comment', data: c }));
+    allEvents.sort((a, b) => (b.data.createdAt || 0) - (a.data.createdAt || 0));
+    const recent = allEvents.slice(0, 3);
+
+    function timeAgo(ts) {
+      const diff = Date.now() - ts;
+      const mins = Math.floor(diff / 60000);
+      if (mins < 60) return mins + ' min';
+      const hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + ' h';
+      const days = Math.floor(hrs / 24);
+      return days === 1 ? 'Ayer' : days + ' días';
+    }
+
+    activityContainer.innerHTML = recent.map((ev, idx) => {
+      const sep = idx < recent.length - 1 ? '<div class="h-[1px] bg-surface-container-low mx-3"></div>' : '';
+      if (ev.type === 'comment') {
+        const c = ev.data;
+        return `
+        <div class="p-3.5 flex items-start gap-3 hover:bg-surface-container-low transition-colors">
+          <div class="w-8 h-8 rounded-full bg-secondary-fixed text-secondary flex items-center justify-center shrink-0 mt-0.5">
+            <span class="material-symbols-outlined text-[16px]">chat</span>
+          </div>
+          <div class="flex flex-col min-w-0 flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-label-md text-label-md text-on-surface font-semibold truncate">${c.authorName}</span>
+              <span class="font-label-sm text-label-sm text-on-surface-variant shrink-0">${timeAgo(c.createdAt)}</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">"${c.content.substring(0, 80)}..."</p>
+            <span class="font-label-sm text-label-sm text-secondary mt-1">Estado: ${c.status}</span>
+          </div>
+        </div>${sep}`;
+      } else {
+        const a = ev.data;
+        const icon = a.status === 'published' ? 'publish' : 'draw';
+        const iconBg = a.status === 'published' ? 'bg-primary-fixed text-primary-container' : 'bg-secondary-fixed text-secondary';
+        return `
+        <div class="p-3.5 flex items-start gap-3 hover:bg-surface-container-low transition-colors">
+          <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0 mt-0.5">
+            <span class="material-symbols-outlined text-[16px]">${icon}</span>
+          </div>
+          <div class="flex flex-col min-w-0 flex-1">
+            <div class="flex items-center justify-between">
+              <span class="font-label-md text-label-md text-on-surface font-semibold truncate">${a.status === 'published' ? 'Artículo publicado' : 'Borrador'}</span>
+              <span class="font-label-sm text-label-sm text-on-surface-variant shrink-0">${timeAgo(a.createdAt)}</span>
+            </div>
+            <p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">"${a.title}"</p>
+            <span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Por ${a.author || 'Lic. Ramona Almonte'}</span>
+          </div>
+        </div>${sep}`;
+      }
+    }).join('');
+  }
+});
+</script>
 </body></html>

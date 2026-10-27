@@ -403,4 +403,163 @@
     });
   });
 </script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/90 backdrop-blur-xl shadow-[0_-2px_12px_rgba(15,32,66,0.06)]" data-active-classes="text-secondary font-semibold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="panel" href="panel.html"><span class="material-symbols-outlined text-[22px]">dashboard</span><span class="font-label-sm text-label-sm mt-0.5">Panel</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="articulos" href="gestion.html"><span class="material-symbols-outlined text-[22px]">article</span><span class="font-label-sm text-label-sm mt-0.5">Artículos</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="editor" href="editor.html"><div class="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center text-on-primary shadow-[0_2px_6px_rgba(15,32,66,0.2)]"><span class="material-symbols-outlined text-[20px]">edit_note</span></div></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors" data-path="multimedia" href="biblioteca.html"><span class="material-symbols-outlined text-[22px]">photo_library</span><span class="font-label-sm text-label-sm mt-0.5">Medios</span></a><a class="flex flex-col items-center justify-center w-14 h-14 text-on-surface-variant hover:text-on-surface transition-colors relative" data-path="moderacion" href="moderacion.html"><span class="material-symbols-outlined text-[22px]">rate_review</span><span class="font-label-sm text-label-sm mt-0.5">Moderación</span><span class="absolute top-1.5 right-2.5 w-1.5 h-1.5 rounded-full bg-error"></span></a></div></nav><script src="db.js"></script>
+<script>
+// === CRUD DINÁMICO: Gestión de Publicaciones ===
+(async function() {
+  await AulaAbiertaDB._initPromise;
+
+  let allArticles = [], currentTab = 'todos', searchTerm = '', deleteTargetId = null;
+  const TAB_MAP = { todos: null, publicados: 'published', borradores: 'draft', programados: 'scheduled' };
+
+  const mainSections = document.querySelectorAll('main > div > section');
+  const listContainer = mainSections[2];
+  const searchEl = document.querySelector('input[placeholder*="Buscar por título"]');
+  const headerCountP = document.querySelector('section p.font-label-md');
+
+  // Wire "Nuevo" button
+  document.querySelectorAll('a[href="#"]').forEach(a => {
+    if (a.textContent.includes('Nuevo')) a.href = 'editor.html';
+  });
+
+  // Clone tab buttons to strip old listeners
+  const oldTabs = document.querySelectorAll('[data-tab]');
+  const tabBtns = [];
+  oldTabs.forEach(btn => {
+    const clone = btn.cloneNode(true);
+    btn.parentNode.replaceChild(clone, btn);
+    tabBtns.push(clone);
+  });
+
+  // Hide static pagination
+  const pagFooter = document.querySelector('main > div > footer');
+  if (pagFooter) pagFooter.style.display = 'none';
+
+  async function loadData() {
+    allArticles = await AulaAbiertaDB.getAll('articles');
+    allArticles.sort((a, b) => b.createdAt - a.createdAt);
+    render();
+    updateCounts();
+  }
+
+  function filtered() {
+    const sf = TAB_MAP[currentTab];
+    return allArticles.filter(a => {
+      if (sf && a.status !== sf) return false;
+      if (searchTerm && !a.title.toLowerCase().includes(searchTerm) && !(a.subject||'').toLowerCase().includes(searchTerm)) return false;
+      return true;
+    });
+  }
+
+  function statusBadge(s) {
+    if (s === 'published') return '<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-on-tertiary-container font-label-sm text-label-sm flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-on-tertiary-container"></span> Publicado</span>';
+    if (s === 'draft') return '<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed-variant font-label-sm text-label-sm flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span> Borrador</span>';
+    return '<span class="px-2 py-0.5 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm flex items-center gap-1"><span class="material-symbols-outlined text-[13px] text-secondary">schedule</span> Programado</span>';
+  }
+
+  function fmtDate(ts) { return new Date(ts).toLocaleDateString('es-DO', {day:'numeric',month:'short',year:'numeric'}); }
+
+  function cardHTML(a) {
+    const g = (a.grade||'').split(' ')[0];
+    const imgCls = a.status === 'draft' ? 'grayscale opacity-75' : '';
+    const bgExtra = a.status === 'draft' ? '-highest' : '';
+    const spanBg = a.status === 'draft' ? 'bg-surface-container-highest text-on-surface-variant' : 'bg-primary/70 text-on-primary';
+    return '<article class="bg-surface-container-lowest rounded-xl p-space-md shadow-sm relative flex flex-col gap-3" data-id="' + a.id + '">' +
+      '<div class="flex items-start gap-3">' +
+        '<div class="pt-0.5 shrink-0"><input class="w-4 h-4 rounded text-primary-container article-select accent-primary-container cursor-pointer" type="checkbox" data-id="' + a.id + '"/></div>' +
+        '<div class="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container' + bgExtra + '">' +
+          '<img class="w-full h-full object-cover ' + imgCls + '" src="' + (a.coverImage||'') + '" alt="' + (a.coverAlt||'') + '"/>' +
+          '<span class="absolute bottom-1 right-1 px-1 rounded ' + spanBg + ' font-label-sm text-label-sm">' + g + '</span>' +
+        '</div>' +
+        '<div class="flex flex-col min-w-0 flex-1">' +
+          '<div class="flex items-center justify-between gap-1 mb-1">' + statusBadge(a.status) + '<span class="font-label-sm text-label-sm text-on-surface-variant">' + fmtDate(a.createdAt) + '</span></div>' +
+          '<h2 class="font-title-md text-title-md text-on-surface line-clamp-2 leading-snug">' + a.title + '</h2>' +
+          '<p class="font-label-sm text-label-sm text-on-surface-variant mt-1 truncate">' + (a.subject||'') + '</p>' +
+        '</div>' +
+      '</div>' +
+      '<div class="grid grid-cols-2 gap-2 py-1.5 px-3 rounded-lg bg-surface-container-low text-on-surface">' +
+        '<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-secondary text-[16px]">visibility</span><span class="font-label-md text-label-md">' + (a.views||0).toLocaleString() + ' <span class="font-body-sm text-body-sm text-on-surface-variant">lecturas</span></span></div>' +
+        '<div class="flex items-center gap-1.5"><span class="material-symbols-outlined text-on-surface-variant text-[16px]">forum</span><span class="font-label-md text-label-md cc" data-art="' + a.id + '">0 <span class="font-body-sm text-body-sm text-on-surface-variant">comentarios</span></span></div>' +
+      '</div>' +
+      '<div class="flex items-center justify-between pt-1 gap-1">' +
+        '<div class="flex items-center gap-1">' +
+          '<a class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-label-sm text-label-sm transition-colors" href="editor.html?id=' + a.id + '"><span class="material-symbols-outlined text-[16px] text-secondary">edit</span><span>Editar</span></a>' +
+          '<a class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-label-sm text-label-sm transition-colors" href="lectura.html?id=' + a.id + '"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">visibility</span><span>Ver</span></a>' +
+        '</div>' +
+        '<button class="p-1.5 rounded-lg text-error hover:bg-error-container/40 transition-colors btn-del" data-id="' + a.id + '" data-title="' + a.title + '"><span class="material-symbols-outlined text-[18px]">delete</span></button>' +
+      '</div>' +
+    '</article>';
+  }
+
+  function render() {
+    const items = filtered();
+    listContainer.innerHTML = items.map(cardHTML).join('');
+    listContainer.querySelectorAll('.btn-del').forEach(b => {
+      b.addEventListener('click', () => { deleteTargetId = b.dataset.id; openDeleteDialog(b.dataset.title); });
+    });
+    bindCbs(items.length);
+    AulaAbiertaDB.getAll('comments').then(comms => {
+      items.forEach(a => {
+        const n = comms.filter(c => c.articleId === a.id).length;
+        const el = listContainer.querySelector('.cc[data-art="' + a.id + '"]');
+        if (el) el.innerHTML = n + ' <span class="font-body-sm text-body-sm text-on-surface-variant">comentarios</span>';
+      });
+    });
+  }
+
+  function bindCbs(total) {
+    const sa = document.getElementById('selectAllCheckbox');
+    const ba = document.getElementById('batchActionsBar');
+    const cbs = () => listContainer.querySelectorAll('.article-select');
+    const upd = () => {
+      const n = listContainer.querySelectorAll('.article-select:checked').length;
+      const sc = document.getElementById('selectedCount');
+      if (sc) sc.textContent = n;
+      if (ba) { if (n > 0) ba.classList.remove('opacity-60','pointer-events-none'); else ba.classList.add('opacity-60','pointer-events-none'); }
+    };
+    if (sa) sa.onchange = () => { cbs().forEach(c => c.checked = sa.checked); upd(); };
+    cbs().forEach(c => { c.onchange = upd; });
+    const lbl = document.querySelector('label[for="selectAllCheckbox"]');
+    if (lbl) lbl.innerHTML = 'Seleccionar página (<span id="selectedCount">0</span>/' + total + ')';
+  }
+
+  function updateCounts() {
+    const c = { todos: allArticles.length, publicados: 0, borradores: 0, programados: 0 };
+    allArticles.forEach(a => { if (a.status === 'published') c.publicados++; else if (a.status === 'draft') c.borradores++; else if (a.status === 'scheduled') c.programados++; });
+    tabBtns.forEach(b => { const t = b.dataset.tab; const badge = b.querySelector('span:last-child'); if (badge && c[t] !== undefined) badge.textContent = c[t]; });
+    if (headerCountP) headerCountP.textContent = allArticles.length + ' artículos en total • Aula Abierta';
+  }
+
+  tabBtns.forEach(b => b.addEventListener('click', () => {
+    currentTab = b.dataset.tab;
+    tabBtns.forEach(t => {
+      t.className = 'flex items-center gap-2 px-3.5 py-2 rounded-full bg-surface-container-low hover:bg-surface-container text-on-surface shrink-0 transition-all';
+      const bd = t.querySelector('span:last-child');
+      if (bd) bd.className = 'px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm';
+    });
+    b.className = 'flex items-center gap-2 px-3.5 py-2 rounded-full bg-primary-container text-on-primary shrink-0 shadow-sm transition-all';
+    const ab = b.querySelector('span:last-child');
+    if (ab) ab.className = 'px-2 py-0.5 rounded-full bg-surface-container-lowest/20 text-white font-label-sm text-label-sm';
+    render();
+  }));
+
+  if (searchEl) searchEl.addEventListener('input', () => { searchTerm = searchEl.value.trim().toLowerCase(); render(); });
+
+  // Override confirmDelete to use IndexedDB
+  window.confirmDelete = async function() {
+    if (deleteTargetId) {
+      await AulaAbiertaDB.deleteArticle(deleteTargetId);
+      deleteTargetId = null;
+      closeDeleteDialog();
+      await loadData();
+      const t = document.createElement('div');
+      t.className = 'fixed bottom-20 left-4 right-4 z-50 p-3 rounded-lg bg-inverse-surface text-inverse-on-surface font-label-md text-label-md shadow-lg';
+      t.textContent = 'Artículo eliminado correctamente.';
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+  };
+
+  await loadData();
+})();
+</script>
 </body></html>
