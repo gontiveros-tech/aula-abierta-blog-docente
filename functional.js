@@ -23,8 +23,9 @@ let articles=[],comments=[];
 try{articles=await api('articles')}catch(err){panel.innerHTML='<h2>El contenido está temporalmente indisponible</h2><p role="alert">'+esc(err.message)+'</p><p>La aplicación está publicada, pero el servicio de datos aún presenta un problema.</p>';return}try{comments=await api('comments')}catch(err){console.warn('Comentarios no disponibles',err);comments=[]}
 if(isAdmin&&!sessionStorage.getItem('aula-admin')){lock();return}
 if(page==='acceso.html'){
+const heading=document.querySelector('header h1');if(heading)heading.textContent='Acceso docente';
 let configured=false;try{configured=(await api('status')).adminConfigured}catch{}
-panel.innerHTML='<h2>Acceso docente</h2><p>'+(configured?'Introduce tu contraseña administrativa.':'El administrador debe configurar la variable AULA_ADMIN_PASSWORD en Netlify (mínimo 16 caracteres).')+'</p><form id="aa-login">'+formInput('Contraseña','aa-password','','password')+'<button>Entrar</button></form><p id="aa-status" role="status"></p>';
+panel.innerHTML='<h2>Acceso docente</h2><p>'+(configured?'Introduce tu contraseña administrativa.':'El servidor no detecta una contraseña administrativa válida. Comprueba AULA_ADMIN_PASSWORD en las variables de entorno de Netlify (mínimo 8 caracteres).')+'</p><form id="aa-login">'+formInput('Contraseña','aa-password','','password')+'<button>Entrar</button></form><p id="aa-status" role="status"></p>';
 $('#aa-login').onsubmit=async ev=>{ev.preventDefault();sessionStorage.setItem('aula-admin',$('#aa-password').value);try{const check=await api('status');if(!check.authorized)throw Error('Contraseña incorrecta o administración no configurada');location.href='panel.html'}catch(err){sessionStorage.removeItem('aula-admin');setStatus(err.message)}};
 return;
 }
