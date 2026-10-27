@@ -1,5 +1,5 @@
 import {getStore} from '@netlify/blobs';
-import {timingSafeEqual,createHash} from 'node:crypto';
+import {timingSafeEqual,createHash,randomUUID} from 'node:crypto';
 const json=(code,data)=>({statusCode:code,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','access-control-allow-origin':'*'},body:JSON.stringify(data)});
 const safe=(s,max=3000)=>String(s??'').trim().slice(0,max);
 const auth=(h)=>{const secret=process.env.AULA_ADMIN_PASSWORD;if(!secret||secret.length<16)return false;const given=(h['x-admin-password']||'');const a=createHash('sha256').update(secret).digest(),b=createHash('sha256').update(given).digest();return timingSafeEqual(a,b);};
@@ -23,7 +23,7 @@ if(op==='comments'){
  if(!author||text.length<3)return json(400,{error:'Nombre y comentario obligatorios'});
  const comments=await store.get('comments',{type:'json'})||[];
  if(comments.length>=3000)return json(503,{error:'Capacidad temporalmente agotada'});
- comments.push({id:crypto.randomUUID(),articleId:body.articleId,author,text,status:'pending',created:new Date().toISOString()});
+ comments.push({id:randomUUID(),articleId:body.articleId,author,text,status:'pending',created:new Date().toISOString()});
  await store.setJSON('comments',comments);return json(201,{ok:true,message:'Comentario pendiente de moderación'});
 }
 if(!auth(event.headers))return json(401,{error:'Acceso administrativo no configurado o contraseña incorrecta'});
@@ -32,7 +32,7 @@ if(op==='articles'){
  if(body.action==='delete'){await store.setJSON('articles',list.filter(a=>a.id!==body.id));return json(200,{ok:true})}
  const title=safe(body.title,180),category=safe(body.category,80),content=safe(body.body,30000);
  if(!title||!content)return json(400,{error:'Título y contenido obligatorios'});
- const id=safe(body.id,100)||crypto.randomUUID();
+ const id=safe(body.id,100)||randomUUID();
  const item={id,title,category,body:content,status:body.status==='published'?'published':'draft',image:safe(body.image,1800000),updated:new Date().toISOString()};
  const index=list.findIndex(a=>a.id===id);if(index>=0)list[index]=item;else list.unshift(item);
  if(list.length>500)return json(400,{error:'Límite de artículos alcanzado'});
