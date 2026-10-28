@@ -379,6 +379,23 @@ class StorageService {
       for (const med of defaultMedia) {
         await this._putRaw('media', med);
       }
+
+      // Sembrar perfil docente por defecto (editable desde perfil.html)
+      const settingsCount = await this._countRaw('settings');
+      if (settingsCount === 0) {
+        await this._putRaw('settings', {
+          key: 'teacherProfile',
+          name: 'Lic. Ramona Almonte',
+          title: 'Lic.',
+          role: 'Especialista en Didáctica',
+          specialty: 'Educación Primaria • Mención Ciencias',
+          school: 'Distrito Educativo 10-01',
+          yearsExperience: 14,
+          bio: 'Educar con ternura y firmeza es encender una antorcha que nunca dejará de alumbrar el porvenir de nuestra patria.',
+          photoUrl: '',
+          updatedAt: Date.now()
+        });
+      }
     }
   }
 
@@ -552,6 +569,31 @@ class StorageService {
 
   async deleteMedia(id) {
     return await this.delete('media', id);
+  }
+
+  // ── Perfil Docente ──
+  async getTeacherProfile() {
+    const profile = await this.get('settings', 'teacherProfile');
+    // Retornar defaults si no existe
+    return profile || {
+      key: 'teacherProfile',
+      name: 'Docente',
+      title: '',
+      role: '',
+      specialty: '',
+      school: '',
+      yearsExperience: 0,
+      bio: '',
+      photoUrl: '',
+      updatedAt: Date.now()
+    };
+  }
+
+  async updateTeacherProfile(updates) {
+    const current = await this.getTeacherProfile();
+    Object.assign(current, updates, { key: 'teacherProfile', updatedAt: Date.now() });
+    await this.put('settings', current);
+    return current;
   }
 }
 

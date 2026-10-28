@@ -6,7 +6,7 @@
       min-height: max(884px, 100dvh);
     }
   </style>
-  </head><body class="bg-surface font-body-md text-on-surface antialiased"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-gutter-mobile flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><button aria-label="Volver" class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface hover:bg-surface-container-high transition-colors shrink-0" onclick="history.back()"><span class="material-symbols-outlined text-[22px]">arrow_back</span></button><h1 class="font-headline-sm text-headline-sm text-primary truncate">Editor</h1></div><div class="flex items-center gap-space-xs shrink-0"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full pb-12">
+  </head><body data-auto-profile class="bg-surface font-body-md text-on-surface antialiased"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-gutter-mobile flex items-center justify-between gap-space-sm"><div class="flex items-center gap-space-sm min-w-0"><button aria-label="Volver" class="w-11 h-11 flex items-center justify-center rounded-lg text-on-surface hover:bg-surface-container-high transition-colors shrink-0" onclick="history.back()"><span class="material-symbols-outlined text-[22px]">arrow_back</span></button><h1 class="font-headline-sm text-headline-sm text-primary truncate">Editor</h1></div><div class="flex items-center gap-space-xs shrink-0"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex flex-col relative w-full pt-16 bg-surface min-h-screen"><div class="flex flex-col w-full pb-12">
 <!-- Status bar & Global Actions -->
 <div class="w-full bg-surface-container-low px-gutter-mobile py-space-sm flex flex-col gap-space-sm shadow-sm">
 <div class="flex items-center justify-between gap-space-xs">
@@ -324,6 +324,7 @@
 </button>
 </div>
 </div></main><script src="db.js"></script>
+<script src="profile-loader.js"></script>
 <script>
 (function() {
   // === DOM References ===
@@ -369,6 +370,7 @@
 
   // === State ===
   let editingArticle = null;
+  let _teacherProfile = null;
   const urlParams = new URLSearchParams(window.location.search);
   const editId = urlParams.get('id');
 
@@ -465,8 +467,8 @@
       status: currentStatus,
       coverImage: coverImg ? coverImg.src : '',
       coverAlt: coverAltInput.value.trim(),
-      author: 'Lic. Ramona Almonte',
-      role: 'Especialista en Didáctica',
+      author: _teacherProfile?.name || 'Docente',
+      role: _teacherProfile?.role || '',
       content: contentArea ? contentArea.innerHTML : '',
       tags: getTags(),
       allowComments: commentsToggle ? commentsToggle.checked : true,
@@ -616,6 +618,9 @@
   // === Init ===
   async function init() {
     await window.AulaAbiertaDB._initPromise;
+    if (typeof window.getTeacherProfile === 'function') {
+      try { _teacherProfile = await window.getTeacherProfile(); } catch(e) {}
+    }
     if (editId) {
       await loadArticleForEdit(editId);
     } else {
