@@ -348,10 +348,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   const articles = await AulaAbiertaDB.getAll('articles');
   const comments = await AulaAbiertaDB.getAll('comments');
 
+  const media = await AulaAbiertaDB.getAll('media');
+
   const published = articles.filter(a => a.status === 'published');
   const drafts = articles.filter(a => a.status === 'draft');
   const pendingComments = comments.filter(c => c.status === 'pending');
   const totalViews = articles.reduce((sum, a) => sum + (a.views || 0), 0);
+  const totalInteractions = comments.length + totalViews;
+
+  // --- 0. SALUDO: interacciones reales ---
+  const greetingP = document.querySelector('p.font-body-sm.text-body-sm.text-on-surface-variant');
+  if (greetingP) {
+    const interactionSpan = greetingP.querySelector('.text-secondary.font-semibold');
+    if (interactionSpan) {
+      interactionSpan.textContent = '+' + totalInteractions + ' interacciones';
+    }
+  }
 
   // --- 1. MÉTRICAS (4 cards) ---
   const metricCards = document.querySelectorAll('.grid.grid-cols-2.gap-3 > div');
@@ -368,6 +380,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
       }).length;
       badge.textContent = thisMonth > 0 ? ('+' + thisMonth + ' este mes') : 'Al día';
+    }
+  }
+
+  // Métrica 2: Recursos didácticos (media)
+  if (metricCards[1]) {
+    const num = metricCards[1].querySelector('.font-headline-md-mobile');
+    if (num) num.textContent = media.length;
+    const badge = metricCards[1].querySelector('.rounded-full.bg-tertiary-fixed');
+    if (badge) {
+      const totalSizeKB = media.reduce((sum, m) => sum + (m.sizeKB || 0), 0);
+      if (totalSizeKB >= 1000) {
+        badge.textContent = (totalSizeKB / 1000).toFixed(1) + ' MB total';
+      } else {
+        badge.textContent = totalSizeKB + ' KB total';
+      }
     }
   }
 
@@ -392,6 +419,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         num.textContent = totalViews;
       }
     }
+    const badge4 = metricCards[3].querySelector('.rounded-full.bg-secondary-fixed');
+    if (badge4) {
+      badge4.textContent = totalViews > 0 ? (totalViews + ' lecturas') : 'Sin lecturas';
+    }
+  }
+
+  // --- ALMACENAMIENTO: calcular uso real ---
+  const totalMediaKB = media.reduce((sum, m) => sum + (m.sizeKB || 0), 0);
+  const totalStorageMB = Math.round(totalMediaKB / 1024 * 10) / 10 || 0;
+  const maxStorageMB = 500;
+  const storagePct = Math.min(Math.round((totalStorageMB / maxStorageMB) * 100), 100);
+  // Find the storage icon and traverse to its sibling label
+  document.querySelectorAll('span.material-symbols-outlined').forEach(icon => {
+    if (icon.textContent.trim() === 'cloud_queue') {
+      const wrapper = icon.closest('div');
+      if (wrapper && wrapper.nextElementSibling) {
+        const sLabel = wrapper.nextElementSibling.querySelector('.font-label-sm');
+        if (sLabel) sLabel.textContent = totalStorageMB + ' MB usados de ' + maxStorageMB + ' MB (' + storagePct + '%)';
+      }
+    }
+  });
+  // Update storage bar
+  const storageBarContainer = document.querySelector('.bg-surface-container-highest.rounded-full.h-2');
+  if (storageBarContainer) {
+    const storageBar = storageBarContainer.querySelector('div');
+    if (storageBar) storageBar.style.width = storagePct + '%';
   }
 
   // --- 2. ACCIONES RÁPIDAS ---
@@ -492,10 +545,10 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="flex flex-col min-w-0 flex-1">
             <div class="flex items-center justify-between">
-              <span class="font-label-md text-label-md text-on-surface font-semibold truncate">${c.authorName}</span>
+              <span class="font-label-md text-label-md text-on-surface font-semibold truncate">${escapeHTML(c.authorName)}</span>
               <span class="font-label-sm text-label-sm text-on-surface-variant shrink-0">${timeAgo(c.createdAt)}</span>
             </div>
-            <p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">"${c.content.substring(0, 80)}..."</p>
+            <p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">"${escapeHTML(c.content.substring(0, 80))}..."</p>
             <span class="font-label-sm text-label-sm text-secondary mt-1">Estado: ${c.status}</span>
           </div>
         </div>${sep}`;
@@ -513,8 +566,8 @@ document.addEventListener('DOMContentLoaded', async () => {
               <span class="font-label-md text-label-md text-on-surface font-semibold truncate">${a.status === 'published' ? 'Artículo publicado' : 'Borrador'}</span>
               <span class="font-label-sm text-label-sm text-on-surface-variant shrink-0">${timeAgo(a.createdAt)}</span>
             </div>
-            <p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">"${a.title}"</p>
-            <span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Por ${a.author || 'Lic. Ramona Almonte'}</span>
+            <p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-1">"${escapeHTML(a.title)}"</p>
+            <span class="font-label-sm text-label-sm text-on-surface-variant mt-1">Por ${escapeHTML(a.author || 'Lic. Ramona Almonte')}</span>
           </div>
         </div>${sep}`;
       }

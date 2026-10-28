@@ -65,8 +65,29 @@ class StorageService {
     });
   }
 
+  // ── Métodos internos sin await _initPromise (evitan deadlock en seed) ──
+  _countRaw(storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction([storeName], 'readonly');
+      const store = tx.objectStore(storeName);
+      const req = store.count();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  _putRaw(storeName, item) {
+    return new Promise((resolve, reject) => {
+      const tx = this.db.transaction([storeName], 'readwrite');
+      const store = tx.objectStore(storeName);
+      const req = store.put(item);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
   async _seedInitialData() {
-    const articlesCount = await this.count('articles');
+    const articlesCount = await this._countRaw('articles');
     if (articlesCount === 0) {
       // Sembrar datos educativos iniciales
       const defaultArticles = [
@@ -76,7 +97,7 @@ class StorageService {
           summary: 'Una travesía pedagógica para comprender el viaje inagotable del recurso más preciado de nuestra isla y el planeta.',
           subject: 'Ciencias Naturales',
           grade: '5to Primaria',
-          readTime: 5,
+          readTime: 8,
           status: 'published', // 'published', 'draft', 'scheduled'
           coverImage: 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=1200&q=80',
           coverAlt: 'Esquema y paisaje del ciclo hidrológico en la naturaleza',
@@ -85,31 +106,124 @@ class StorageService {
           views: 2450,
           createdAt: new Date('2025-03-14T08:30:00Z').getTime(),
           content: `
+            <div style="background:linear-gradient(135deg,#e0f2fe,#f0fdf4);padding:20px 24px;border-radius:12px;margin-bottom:24px;border-left:4px solid #0284c7;">
+              <p style="margin:0 0 8px;font-weight:700;color:#0369a1;">📋 Ficha Curricular — Alineada al Currículo MINERD</p>
+              <p style="margin:4px 0;"><strong>Competencia fundamental:</strong> Científica y Tecnológica</p>
+              <p style="margin:4px 0;"><strong>Eje temático:</strong> La Tierra y el Universo — Ciclos naturales</p>
+              <p style="margin:4px 0;"><strong>Indicador de logro:</strong> Describe las fases del ciclo del agua y explica su importancia para los ecosistemas locales.</p>
+              <p style="margin:4px 0;"><strong>Grado:</strong> 5to Primaria &nbsp;|&nbsp; <strong>Duración:</strong> 3 sesiones de 45 min</p>
+            </div>
+
             <h2>1. ¿De dónde viene la lluvia que riega nuestros campos?</h2>
             <p>Cada vez que observamos un aguacero vespertino sobre Santo Domingo, el verde valle del Cibao o las aguas cristalinas del río Yaque del Norte, estamos presenciando una obra maestra de la naturaleza que lleva miles de millones de años en marcha: <strong>el ciclo del agua</strong>.</p>
-            <p>Para los estudiantes de primaria y secundaria en nuestra región insular, comprender este ciclo no es solo una lección de ciencias; es entender la columna vertebral de nuestra agricultura, nuestro clima templado por los alisios y el agua potable que llega a nuestros hogares y aulas escolares.</p>
-            
-            <blockquote class="pedagogical-quote">
-              <p>«El agua que bebió un dinosaurio hace millones de años es exactamente la misma molécula que hoy acaricia las hojas de nuestros manglares dominicanos.»</p>
-              <cite>— Principio de Conservación Hidrológica</cite>
+            <p>Para los estudiantes de primaria en nuestra región insular, comprender este ciclo no es solo una lección de ciencias; es entender la columna vertebral de nuestra agricultura, nuestro clima templado por los alisios y el agua potable que llega a nuestros hogares y aulas escolares.</p>
+
+            <blockquote style="border-left:4px solid #0284c7;padding:16px 20px;background:#f0f9ff;border-radius:0 8px 8px 0;margin:24px 0;">
+              <p style="font-style:italic;margin:0 0 8px;">«El agua que bebió un dinosaurio hace millones de años es exactamente la misma molécula que hoy acaricia las hojas de nuestros manglares dominicanos.»</p>
+              <cite style="color:#64748b;">— Principio de Conservación Hidrológica</cite>
             </blockquote>
 
             <h2>2. Las 4 fases clave del ciclo continuo</h2>
             <p>El agua se transforma de líquido a gas y de gas a sólido en una danza ininterrumpida:</p>
             <ol>
-              <li><strong>Evaporación:</strong> El calor del sol calienta el agua superficial de los ríos, lagos y el inmenso mar Caribe, transformándola en vapor invisible que asciende a la atmósfera.</li>
-              <li><strong>Condensación:</strong> Al enfriarse en las capas altas, el vapor de agua se agrupa en diminutas gotas formando las nubes y la neblina matutina de nuestras cordilleras.</li>
-              <li><strong>Precipitación:</strong> Cuando las nubes se saturan y no sostienen más peso, las gotas caen por gravedad en forma de lluvia, llovizna o, en cumbres muy frías, granizo.</li>
-              <li><strong>Recolección:</strong> El agua alimenta los acuíferos subterráneos, fluye por las cuencas de los arroyos y desemboca de vuelta en el océano, reiniciando el milagro.</li>
+              <li><strong>Evaporación:</strong> El calor del sol calienta el agua superficial de los ríos, lagos y el inmenso mar Caribe, transformándola en vapor invisible que asciende a la atmósfera. En República Dominicana, con más de 1,600 km de costa, la evaporación es intensa todo el año.</li>
+              <li><strong>Condensación:</strong> Al enfriarse en las capas altas, el vapor de agua se agrupa en diminutas gotas formando las nubes y la neblina matutina que cubre nuestras cordilleras Central y Septentrional.</li>
+              <li><strong>Precipitación:</strong> Cuando las nubes se saturan, las gotas caen por gravedad en forma de lluvia, llovizna o, en el Pico Duarte, ocasionalmente granizo. Nuestro país recibe un promedio de 1,500 mm de lluvia al año.</li>
+              <li><strong>Recolección (Escorrentía e Infiltración):</strong> El agua alimenta los acuíferos subterráneos, fluye por las cuencas de los 20 ríos principales y desemboca de vuelta en el océano, reiniciando el ciclo.</li>
             </ol>
 
-            <div class="callout callout-info">
-              <h4>¿Sabías que...?</h4>
-              <p>La Cordillera Central de la República Dominicana es conocida cariñosamente como la <em>«Madre de las Aguas»</em>. Allí nacen los ríos más caudalosos del país garantizando el suministro hídrico vital.</p>
+            <div style="background:#ecfdf5;padding:16px 20px;border-radius:10px;margin:24px 0;border:1px solid #a7f3d0;">
+              <h4 style="margin:0 0 8px;color:#065f46;">🌿 ¿Sabías que...?</h4>
+              <p style="margin:0;">La Cordillera Central de la República Dominicana es conocida como la <em>«Madre de las Aguas»</em>. Allí nacen los ríos Yaque del Norte, Yaque del Sur, Artibonito y Yuna, que abastecen a más del 70% de la población dominicana.</p>
             </div>
 
-            <h2>3. Síntesis y Compromiso Ciudadano</h2>
-            <p>El ciclo hidrológico no es estático; se ve directamente impactado por la deforestación de nuestras lomas, la contaminación por plásticos en cañadas y el calentamiento global. Cuidar cada gota y sembrar árboles en nuestras escuelas es proteger la maquinaria misma que hace posible la vida en nuestra isla.</p>
+            <h2>3. Secuencia Didáctica: El Experimento de la Bolsa Viajera</h2>
+            <p>Esta actividad permite a los estudiantes <strong>observar las 4 fases del ciclo en tiempo real</strong> usando materiales de bajo costo disponibles en cualquier escuela dominicana.</p>
+
+            <div style="background:#fff;padding:20px;border-radius:10px;border:1px solid #e2e8f0;margin:16px 0;">
+              <h4 style="color:#1e40af;margin-top:0;">🧪 Materiales (por equipo de 4 estudiantes)</h4>
+              <ul>
+                <li>1 bolsa plástica tipo ziploc transparente</li>
+                <li>1 taza de agua</li>
+                <li>Colorante azul alimentario (2 gotas)</li>
+                <li>Cinta adhesiva fuerte</li>
+                <li>1 marcador permanente</li>
+              </ul>
+
+              <h4 style="color:#1e40af;">📝 Procedimiento (Sesión 1 — 45 min)</h4>
+              <ol>
+                <li>Verter el agua con colorante en la bolsa y sellarla herméticamente.</li>
+                <li>Con el marcador, dibujar un sol arriba, nubes en el medio y el mar abajo.</li>
+                <li>Pegar la bolsa en una ventana que reciba sol directo (orientación sur ideal).</li>
+                <li>Registrar en el cuaderno: hora, temperatura del aula, estado de la bolsa.</li>
+                <li><strong>Predicción:</strong> Cada equipo escribe qué cree que pasará en 2 horas.</li>
+              </ol>
+
+              <h4 style="color:#1e40af;">🔍 Observación (Sesión 2 — día siguiente, 45 min)</h4>
+              <ol>
+                <li>Observar las gotas formadas en la parte superior de la bolsa (condensación).</li>
+                <li>Dibujar en el cuaderno lo que ven y etiquetar cada fase.</li>
+                <li>Comparar con la predicción: ¿acertaron? ¿Qué los sorprendió?</li>
+                <li>Discusión guiada: ¿Qué pasaría si tapamos el sol? ¿Y si la bolsa estuviera abierta?</li>
+              </ol>
+            </div>
+
+            <h2>4. Actividad para la Familia</h2>
+            <div style="background:#fef3c7;padding:16px 20px;border-radius:10px;margin:16px 0;border:1px solid #fcd34d;">
+              <p style="margin:0 0 12px;font-weight:700;color:#92400e;">🏠 Misión en Casa (con un adulto acompañante)</p>
+              <ol style="margin:0;">
+                <li>Recorrer la casa identificando dónde se <em>usa</em> agua y dónde se <em>desperdicia</em>.</li>
+                <li>Llenar una tabla con 3 columnas: lugar, uso, cantidad estimada.</li>
+                <li>Proponer 3 acciones concretas para ahorrar agua en su hogar.</li>
+                <li>Opcional: Tomar una foto del grifo que más gotea y traerla al aula.</li>
+              </ol>
+            </div>
+
+            <h2>5. Síntesis y Compromiso Ciudadano</h2>
+            <p>El ciclo hidrológico no es estático; se ve directamente impactado por la deforestación de nuestras lomas, la contaminación por plásticos en cañadas y ríos, y el calentamiento global. Cada árbol que sembramos en nuestras escuelas es un regulador del ciclo; cada botella plástica que recogemos de un arroyo es una barrera menos para el flujo natural del agua.</p>
+
+            <div style="background:linear-gradient(135deg,#ede9fe,#e0f2fe);padding:20px;border-radius:10px;margin:24px 0;">
+              <h4 style="margin:0 0 12px;color:#5b21b6;">📊 Rúbrica de Evaluación Formativa</h4>
+              <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <thead>
+                  <tr style="background:#8b5cf6;color:#fff;">
+                    <th style="padding:8px;text-align:left;border-radius:6px 0 0 0;">Criterio</th>
+                    <th style="padding:8px;text-align:center;">Avanzado (4)</th>
+                    <th style="padding:8px;text-align:center;">Satisfactorio (3)</th>
+                    <th style="padding:8px;text-align:center;border-radius:0 6px 0 0;">En proceso (2)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="background:#f5f3ff;">
+                    <td style="padding:8px;font-weight:600;">Identifica las 4 fases</td>
+                    <td style="padding:8px;text-align:center;">Nombra y explica las 4 con ejemplos locales</td>
+                    <td style="padding:8px;text-align:center;">Nombra las 4 fases correctamente</td>
+                    <td style="padding:8px;text-align:center;">Identifica 2-3 fases</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:8px;font-weight:600;">Experimento</td>
+                    <td style="padding:8px;text-align:center;">Registra y explica relación causa-efecto</td>
+                    <td style="padding:8px;text-align:center;">Realiza el experimento y registra</td>
+                    <td style="padding:8px;text-align:center;">Realiza el experimento con ayuda</td>
+                  </tr>
+                  <tr style="background:#f5f3ff;">
+                    <td style="padding:8px;font-weight:600;">Compromiso ambiental</td>
+                    <td style="padding:8px;text-align:center;">Propone y ejecuta acciones en su entorno</td>
+                    <td style="padding:8px;text-align:center;">Propone acciones concretas</td>
+                    <td style="padding:8px;text-align:center;">Reconoce la importancia del cuidado</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="background:#f0f9ff;padding:16px 20px;border-radius:10px;margin:16px 0;border:1px solid #bae6fd;">
+              <p style="margin:0;font-weight:600;color:#0369a1;">📖 Referencias Curriculares</p>
+              <ul style="margin:8px 0 0;color:#334155;">
+                <li>Diseño Curricular Nivel Primario, MINERD (2014), Área Ciencias de la Naturaleza.</li>
+                <li>Ordenanza 02-2015, sobre el currículo revisado del Nivel Primario.</li>
+                <li>UNESCO (2023). Educación para el Desarrollo Sostenible — ODS 6: Agua limpia.</li>
+              </ul>
+            </div>
           `,
           tags: ['Biodiversidad', 'MINERD', 'EducaciónAmbiental', 'Agua']
         },
@@ -177,7 +291,7 @@ class StorageService {
       ];
 
       for (const art of defaultArticles) {
-        await this.put('articles', art);
+        await this._putRaw('articles', art);
       }
 
       // Sembrar comentarios
@@ -222,7 +336,7 @@ class StorageService {
       ];
 
       for (const comm of defaultComments) {
-        await this.put('comments', comm);
+        await this._putRaw('comments', comm);
       }
 
       // Sembrar biblioteca multimedia inicial
@@ -263,9 +377,18 @@ class StorageService {
       ];
 
       for (const med of defaultMedia) {
-        await this.put('media', med);
+        await this._putRaw('media', med);
       }
     }
+  }
+
+  // ── Método faltante: actualizar artículo (usado por lectura.html para vistas) ──
+  async updateArticle(id, updates) {
+    const article = await this.get('articles', id);
+    if (!article) return null;
+    Object.assign(article, updates, { updatedAt: Date.now() });
+    await this.put('articles', article);
+    return article;
   }
 
   // Operaciones CRUD genéricas sobre IndexedDB
@@ -346,7 +469,28 @@ class StorageService {
   }
 
   async deleteArticle(id) {
-    // También eliminar comentarios asociados
+    // Soft-delete: mover a papelera (status = 'trash') en vez de borrar permanentemente
+    const article = await this.get('articles', id);
+    if (!article) return false;
+    article.previousStatus = article.status;
+    article.status = 'trash';
+    article.trashedAt = Date.now();
+    await this.put('articles', article);
+    return true;
+  }
+
+  async restoreArticle(id) {
+    const article = await this.get('articles', id);
+    if (!article || article.status !== 'trash') return null;
+    article.status = article.previousStatus || 'draft';
+    delete article.trashedAt;
+    delete article.previousStatus;
+    await this.put('articles', article);
+    return article;
+  }
+
+  async permanentDeleteArticle(id) {
+    // Eliminación permanente real (solo para vaciar papelera)
     const comments = await this.getAll('comments');
     for (const c of comments) {
       if (c.articleId === id) {
@@ -354,6 +498,11 @@ class StorageService {
       }
     }
     return await this.delete('articles', id);
+  }
+
+  async getTrashedArticles() {
+    const articles = await this.getAll('articles');
+    return articles.filter(a => a.status === 'trash').sort((a, b) => b.trashedAt - a.trashedAt);
   }
 
   async getCommentsByArticle(articleId, onlyApproved = true) {
@@ -408,3 +557,50 @@ class StorageService {
 
 // Instancia global exportable
 window.AulaAbiertaDB = new StorageService();
+
+// === XSS Sanitization Utilities ===
+
+// Sanitize rich HTML content — strips scripts, iframes, event handlers, dangerous tags
+// Use for article body content that legitimately contains formatting (h2, p, strong, etc.)
+function sanitizeHTML(html) {
+  if (!html) return '';
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  // Remove dangerous tags
+  div.querySelectorAll('script, iframe, object, embed, form, input').forEach(el => el.remove());
+  // Remove event handlers and javascript: URLs
+  div.querySelectorAll('*').forEach(el => {
+    Array.from(el.attributes).forEach(attr => {
+      if (attr.name.startsWith('on') || attr.value.startsWith('javascript:')) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+  return div.innerHTML;
+}
+window.sanitizeHTML = sanitizeHTML;
+
+// Escape plain text for safe insertion into HTML templates
+// Use for author names, titles, summaries, comments — any user string in a template literal
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+window.escapeHTML = escapeHTML;
+
+// === Non-blocking Toast Notification ===
+window.showToast = function(message, type) {
+  if (typeof type === 'string' && !['success','error','warning','info'].includes(type)) type = 'info';
+  const toast = document.createElement('div');
+  toast.className = 'toast-notification toast-' + (type || 'info');
+  toast.textContent = message;
+  toast.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:12px 24px;border-radius:8px;color:#fff;font-size:14px;z-index:9999;animation:fadeIn .3s ease;max-width:400px;box-shadow:0 4px 12px rgba(0,0,0,.15);';
+  toast.style.backgroundColor = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : type === 'warning' ? '#f59e0b' : '#3b82f6';
+  document.body.appendChild(toast);
+  setTimeout(() => { toast.style.opacity = '0'; toast.style.transition = 'opacity .3s'; setTimeout(() => toast.remove(), 300); }, 3000);
+};

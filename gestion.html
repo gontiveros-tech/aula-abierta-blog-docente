@@ -381,7 +381,14 @@
     // Micro-interacción: Feedback toast táctil
     const toast = document.createElement('div');
     toast.className = 'fixed bottom-20 left-4 right-4 z-50 p-3 rounded-lg bg-inverse-surface text-inverse-on-surface font-label-md text-label-md shadow-lg flex items-center justify-between';
-    toast.innerHTML = '<span>Artículo enviado a la papelera (30 días).</span><button class="text-secondary-fixed underline" onclick="this.parentElement.remove()">Deshacer</button>';
+    const msgSpan = document.createElement('span');
+    msgSpan.textContent = 'Artículo enviado a la papelera (30 días).';
+    const undoBtn = document.createElement('button');
+    undoBtn.className = 'text-secondary-fixed underline';
+    undoBtn.textContent = 'Deshacer';
+    undoBtn.addEventListener('click', function() { toast.remove(); });
+    toast.appendChild(msgSpan);
+    toast.appendChild(undoBtn);
     document.body.appendChild(toast);
     setTimeout(() => {
       if (toast.parentElement) toast.remove();
@@ -467,13 +474,13 @@
       '<div class="flex items-start gap-3">' +
         '<div class="pt-0.5 shrink-0"><input class="w-4 h-4 rounded text-primary-container article-select accent-primary-container cursor-pointer" type="checkbox" data-id="' + a.id + '"/></div>' +
         '<div class="relative w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container' + bgExtra + '">' +
-          '<img class="w-full h-full object-cover ' + imgCls + '" src="' + (a.coverImage||'') + '" alt="' + (a.coverAlt||'') + '"/>' +
+          '<img class="w-full h-full object-cover ' + imgCls + '" src="' + escapeHTML(a.coverImage||'') + '" alt="' + escapeHTML(a.coverAlt||'') + '"/>' +
           '<span class="absolute bottom-1 right-1 px-1 rounded ' + spanBg + ' font-label-sm text-label-sm">' + g + '</span>' +
         '</div>' +
         '<div class="flex flex-col min-w-0 flex-1">' +
           '<div class="flex items-center justify-between gap-1 mb-1">' + statusBadge(a.status) + '<span class="font-label-sm text-label-sm text-on-surface-variant">' + fmtDate(a.createdAt) + '</span></div>' +
-          '<h2 class="font-title-md text-title-md text-on-surface line-clamp-2 leading-snug">' + a.title + '</h2>' +
-          '<p class="font-label-sm text-label-sm text-on-surface-variant mt-1 truncate">' + (a.subject||'') + '</p>' +
+          '<h2 class="font-title-md text-title-md text-on-surface line-clamp-2 leading-snug">' + escapeHTML(a.title) + '</h2>' +
+          '<p class="font-label-sm text-label-sm text-on-surface-variant mt-1 truncate">' + escapeHTML(a.subject||'') + '</p>' +
         '</div>' +
       '</div>' +
       '<div class="grid grid-cols-2 gap-2 py-1.5 px-3 rounded-lg bg-surface-container-low text-on-surface">' +
@@ -485,7 +492,7 @@
           '<a class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-label-sm text-label-sm transition-colors" href="editor.html?id=' + a.id + '"><span class="material-symbols-outlined text-[16px] text-secondary">edit</span><span>Editar</span></a>' +
           '<a class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container font-label-sm text-label-sm transition-colors" href="lectura.html?id=' + a.id + '"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">visibility</span><span>Ver</span></a>' +
         '</div>' +
-        '<button class="p-1.5 rounded-lg text-error hover:bg-error-container/40 transition-colors btn-del" data-id="' + a.id + '" data-title="' + a.title + '"><span class="material-symbols-outlined text-[18px]">delete</span></button>' +
+        '<button class="p-1.5 rounded-lg text-error hover:bg-error-container/40 transition-colors btn-del" data-id="' + escapeHTML(a.id) + '" data-title="' + escapeHTML(a.title) + '"><span class="material-symbols-outlined text-[18px]">delete</span></button>' +
       '</div>' +
     '</article>';
   }

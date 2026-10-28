@@ -39,6 +39,17 @@
         Una travesía pedagógica para comprender el viaje inagotable del recurso más preciado de nuestra isla y el planeta.
       </p>
 </div>
+<!-- WhatsApp & Copy Link Share Bar -->
+<div class="flex items-center gap-2 flex-wrap" id="share-bar">
+  <button id="btn-whatsapp-share" onclick="shareViaWhatsApp()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-label-lg text-label-lg font-bold shadow-sm transition-all active:scale-95 hover:opacity-90" style="background-color:#25D366;color:#fff;min-height:44px;" aria-label="Compartir en WhatsApp">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+    <span>Compartir en WhatsApp</span>
+  </button>
+  <button id="btn-copy-link" onclick="copyArticleLink()" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface-container-high text-primary font-label-lg text-label-lg font-bold shadow-sm transition-all active:scale-95 hover:bg-surface-variant" style="min-height:44px;" aria-label="Copiar enlace del articulo">
+    <span class="material-symbols-outlined text-[20px]">content_copy</span>
+    <span>Copiar enlace</span>
+  </button>
+</div>
 <!-- Author Profile & Reading Accessibility Tools -->
 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-surface-container-low">
 <div class="flex items-center gap-3">
@@ -489,7 +500,7 @@
           url: window.location.href,
         }).catch(() => {});
       } else {
-        alert('Enlace copiado al portapapeles para compartir con tu clase.');
+        showToast('Enlace copiado al portapapeles para compartir con tu clase.', 'success');
       }
     }
 
@@ -497,8 +508,35 @@
       event.preventDefault();
       const input = document.getElementById('comment-text');
       if (!input.value.trim()) return;
-      alert('¡Gracias por tu aporte pedagógico! Ha sido enviado a moderación docente y se publicará en breve.');
+      showToast('¡Gracias por tu aporte pedagógico! Ha sido enviado a moderación docente y se publicará en breve.', 'success');
       input.value = '';
+    }
+
+    function shareViaWhatsApp() {
+      var titleEl = document.querySelector('article h1');
+      var title = titleEl ? titleEl.textContent.trim() : 'Articulo';
+      var text = '\u{1F4DA} *' + title + '* - Aula Abierta Blog Docente\n' + window.location.href;
+      window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+    }
+
+    function copyArticleLink() {
+      var titleEl = document.querySelector('article h1');
+      var title = titleEl ? titleEl.textContent.trim() : 'Articulo';
+      var text = '\u{1F4DA} ' + title + ' - Aula Abierta Blog Docente\n' + window.location.href;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          var btn = document.getElementById('btn-copy-link');
+          var span = btn.querySelector('span:last-child');
+          var icon = btn.querySelector('.material-symbols-outlined');
+          span.textContent = '¡Copiado!';
+          icon.textContent = 'check';
+          setTimeout(function() { span.textContent = 'Copiar enlace'; icon.textContent = 'content_copy'; }, 2000);
+        }).catch(function() {
+          prompt('Copia este enlace:', window.location.href);
+        });
+      } else {
+        prompt('Copia este enlace:', window.location.href);
+      }
     }
   </script>
 </div></main><script src="db.js"></script>
@@ -523,8 +561,8 @@
     const initials = getInitials(c.authorName || 'AN');
     const bgClass = c.authorType === 'teacher' ? 'bg-secondary-container text-on-secondary-container' : 'bg-surface-container-highest text-primary';
     const dateStr = formatDate(c.createdAt);
-    const schoolLine = c.schoolInfo ? ' · ' + c.schoolInfo : '';
-    const badgeLabel = c.authorBadge || '';
+    const schoolLine = c.schoolInfo ? ' · ' + escapeHTML(c.schoolInfo) : '';
+    const badgeLabel = escapeHTML(c.authorBadge || '');
     let replyHtml = '';
     if (c.teacherReply) {
       replyHtml = `
@@ -534,19 +572,19 @@
           <span class="font-label-sm text-label-sm font-bold text-primary">Respuesta del docente</span>
           <span class="px-1.5 py-0.2 rounded bg-surface-container text-on-surface-variant font-label-sm text-[10px]">Docente</span>
         </div>
-        <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">${c.teacherReply}</p>
+        <p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">${escapeHTML(c.teacherReply)}</p>
       </div>`;
     }
     return `
     <div class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-2.5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-2">
-          <span class="w-7 h-7 rounded-full ${bgClass} flex items-center justify-center font-bold text-label-sm">${initials}</span>
-          <span class="font-title-md text-title-md text-primary font-bold leading-none">${c.authorName}${badgeLabel ? ' (' + badgeLabel + ')' : ''}</span>
+          <span class="w-7 h-7 rounded-full ${bgClass} flex items-center justify-center font-bold text-label-sm">${escapeHTML(initials)}</span>
+          <span class="font-title-md text-title-md text-primary font-bold leading-none">${escapeHTML(c.authorName)}${badgeLabel ? ' (' + badgeLabel + ')' : ''}</span>
         </div>
         <span class="font-label-sm text-label-sm text-on-surface-variant">${dateStr}${schoolLine}</span>
       </div>
-      <p class="font-body-sm text-body-sm text-on-surface leading-relaxed">${c.content}</p>
+      <p class="font-body-sm text-body-sm text-on-surface leading-relaxed">${escapeHTML(c.content)}</p>
       ${replyHtml}
     </div>`;
   }
@@ -555,13 +593,13 @@
     const icon = SUBJECT_ICONS[art.subject] || 'article';
     const coverImg = art.coverImage || 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?auto=format&fit=crop&w=600&q=80';
     return `
-    <a class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-2 hover:bg-surface-container-high transition-colors" href="lectura.html?id=${art.id}">
+    <a class="p-3.5 rounded-xl bg-surface-container-lowest shadow-sm flex flex-col gap-2 hover:bg-surface-container-high transition-colors" href="lectura.html?id=${encodeURIComponent(art.id)}">
       <div class="relative w-full rounded-lg overflow-hidden aspect-[16/9] bg-surface-container">
-        <img class="w-full h-full object-cover" src="${coverImg}" alt="${art.coverAlt || art.title}"/>
+        <img class="w-full h-full object-cover" src="${escapeHTML(coverImg)}" alt="${escapeHTML(art.coverAlt || art.title)}"/>
       </div>
-      <span class="font-label-sm text-label-sm text-secondary font-bold">${art.subject || ''}</span>
-      <h4 class="font-title-md text-title-md text-primary font-bold line-clamp-2">${art.title}</h4>
-      <span class="font-label-sm text-label-sm text-on-surface-variant">${art.readTime || 5} min de lectura · ${art.author || 'Docente'}</span>
+      <span class="font-label-sm text-label-sm text-secondary font-bold">${escapeHTML(art.subject || '')}</span>
+      <h4 class="font-title-md text-title-md text-primary font-bold line-clamp-2">${escapeHTML(art.title)}</h4>
+      <span class="font-label-sm text-label-sm text-on-surface-variant">${art.readTime || 5} min de lectura · ${escapeHTML(art.author || 'Docente')}</span>
     </a>`;
   }
 
@@ -596,7 +634,7 @@
 
       // Populate breadcrumb
       const breadcrumb = document.querySelector('.inline-flex.items-center.gap-1\\.5.px-2\\.5.py-0\\.5.rounded-full.bg-surface-container-high');
-      if (breadcrumb) breadcrumb.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span> ${art.subject || ''} · ${art.grade || ''}`;
+      if (breadcrumb) breadcrumb.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-secondary-container"></span> ${escapeHTML(art.subject || '')} · ${escapeHTML(art.grade || '')}`;
 
       // Title
       const h1 = document.querySelector('h1');
@@ -632,12 +670,12 @@
       // Article body content
       const bodyEl = document.getElementById('article-body-content');
       if (bodyEl && art.content) {
-        bodyEl.innerHTML = art.content;
+        bodyEl.innerHTML = sanitizeHTML(art.content);
       }
 
       // Tags - add below body if present
       if (art.tags && art.tags.length && bodyEl) {
-        const tagsHtml = `<div class="flex flex-wrap gap-2 pt-2">${art.tags.map(t => `<span class="px-3 py-1 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">${t}</span>`).join('')}</div>`;
+        const tagsHtml = `<div class="flex flex-wrap gap-2 pt-2">${art.tags.map(t => `<span class="px-3 py-1 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">${escapeHTML(t)}</span>`).join('')}</div>`;
         bodyEl.insertAdjacentHTML('afterend', tagsHtml);
       }
 
@@ -681,7 +719,7 @@
           setTimeout(() => msg.remove(), 5000);
         } catch(e) {
           console.error('Error al enviar comentario:', e);
-          alert('Error al enviar el comentario. Intenta de nuevo.');
+          showToast('Error al enviar el comentario. Intenta de nuevo.', 'error');
         }
       };
 

@@ -246,7 +246,7 @@
 <span class="material-symbols-outlined text-[16px] text-tertiary-container">check_circle</span>
           Incluye rúbrica evaluativa
         </div>
-<button class="inline-flex items-center gap-1.5 bg-secondary hover:bg-on-secondary-container text-on-secondary font-label-md text-label-md py-2 px-3.5 rounded-lg shadow-sm transition-all" onclick="alert('Iniciando descarga segura de la Guía Didáctica (PDF)...')" type="button">
+<button class="inline-flex items-center gap-1.5 bg-secondary hover:bg-on-secondary-container text-on-secondary font-label-md text-label-md py-2 px-3.5 rounded-lg shadow-sm transition-all" onclick="showToast('Iniciando descarga segura de la Guía Didáctica (PDF)...', 'info')" type="button">
 <span class="material-symbols-outlined text-[18px]">file_download</span>
 <span>Descargar Guía</span>
 </button>
@@ -275,7 +275,7 @@
 <div class="w-7 h-7 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center text-[10px] font-bold ring-2 ring-primary-container">5B</div>
 <div class="w-7 h-7 rounded-full bg-surface text-primary flex items-center justify-center text-[10px] font-bold ring-2 ring-primary-container">+35</div>
 </div>
-<button class="inline-flex items-center gap-1.5 bg-tertiary-fixed text-on-tertiary-fixed font-label-lg text-label-lg py-2 px-4 rounded-lg font-bold shadow-sm hover:opacity-90 transition-opacity" onclick="alert('Abriendo desafío interactivo de Ciencias Naturales...')" type="button">
+<button class="inline-flex items-center gap-1.5 bg-tertiary-fixed text-on-tertiary-fixed font-label-lg text-label-lg py-2 px-4 rounded-lg font-bold shadow-sm hover:opacity-90 transition-opacity" onclick="showToast('Abriendo desafío interactivo de Ciencias Naturales...', 'info')" type="button">
 <span>Jugar al reto de Ciencias</span>
 <span class="material-symbols-outlined text-[18px]">play_arrow</span>
 </button>
@@ -374,6 +374,17 @@
   });
 </script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/95 backdrop-blur-xl shadow-[0_-2px_12px_rgba(15,32,66,0.06)]" data-active-classes="text-primary-container font-semibold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 transition-colors text-primary-container font-semibold" data-path="inicio" href="index.html"><span class="material-symbols-outlined text-[24px]">school</span><span class="font-label-sm text-label-sm">Inicio</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="publicaciones" href="publicaciones.html"><span class="material-symbols-outlined text-[24px]">menu_book</span><span class="font-label-sm text-label-sm">Artículos</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="recursos-didacticos" href="recursos.html"><span class="material-symbols-outlined text-[24px]">folder_open</span><span class="font-label-sm text-label-sm">Recursos</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="actividades-pedagogicas" href="lectura.html"><span class="material-symbols-outlined text-[24px]">extension</span><span class="font-label-sm text-label-sm">Actividades</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="perfil-docente" href="panel.html"><span class="material-symbols-outlined text-[24px]">person_outline</span><span class="font-label-sm text-label-sm">Perfil</span></a></div></nav><script src="db.js"></script>
 <script>
+// === WhatsApp share helper ===
+function shareWhatsAppCard(btn) {
+  var card = btn.closest('article') || btn.closest('a');
+  var titleEl = card.querySelector('h4, h2, a.font-title-md');
+  var title = titleEl ? titleEl.textContent.trim() : 'Articulo';
+  var link = card.querySelector('a[href*="lectura.html"]');
+  var url = link ? new URL(link.href, window.location.href).href : window.location.href;
+  var text = '\u{1F4DA} *' + title + '* - Aula Abierta Blog Docente\n' + url;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
 // === CRUD DINÁMICO: INDEX.HTML ===
 document.addEventListener('DOMContentLoaded', async () => {
   await AulaAbiertaDB._initPromise;
@@ -428,21 +439,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         return `
         <article class="bg-surface-container-lowest p-space-sm rounded-xl shadow-sm hover:shadow-md transition-all flex gap-space-sm items-start">
           <div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 bg-surface-container">
-            <img class="w-full h-full object-cover" src="${art.coverImage || ''}" alt="${art.coverAlt || art.title}"/>
+            <img class="w-full h-full object-cover" src="${escapeHTML(art.coverImage || '')}" alt="${escapeHTML(art.coverAlt || art.title)}"/>
           </div>
           <div class="flex flex-col justify-between flex-1 min-w-0">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="${style.bg} ${style.text} font-label-sm text-label-sm px-2 py-0.5 rounded-full font-semibold">${art.grade || ''}</span>
+              <span class="${style.bg} ${style.text} font-label-sm text-label-sm px-2 py-0.5 rounded-full font-semibold">${escapeHTML(art.grade || '')}</span>
               <span class="font-label-sm text-label-sm text-on-surface-variant">${fmtDate(art.createdAt)}</span>
             </div>
-            <a class="font-title-md text-body-md font-bold text-primary hover:text-secondary transition-colors line-clamp-2 mt-0.5" href="lectura.html?id=${art.id}">
-              ${art.title}
+            <a class="font-title-md text-body-md font-bold text-primary hover:text-secondary transition-colors line-clamp-2 mt-0.5" href="lectura.html?id=${encodeURIComponent(art.id)}">
+              ${escapeHTML(art.title)}
             </a>
             <div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm mt-1">
               <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">timer</span> ${art.readTime || 5} min lectura</span>
-              <button aria-label="Guardar artículo" class="text-on-surface-variant hover:text-primary" type="button">
-                <span class="material-symbols-outlined text-[16px]">bookmark_border</span>
-              </button>
+              <div class="flex items-center gap-1">
+                <button aria-label="Compartir en WhatsApp" class="w-8 h-8 flex items-center justify-center rounded-lg hover:opacity-80 transition-opacity" style="color:#25D366;" type="button" onclick="shareWhatsAppCard(this)">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                </button>
+                <button aria-label="Guardar artículo" class="text-on-surface-variant hover:text-primary" type="button">
+                  <span class="material-symbols-outlined text-[16px]">bookmark_border</span>
+                </button>
+              </div>
             </div>
           </div>
         </article>`;

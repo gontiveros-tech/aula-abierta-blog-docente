@@ -401,7 +401,7 @@
     tags.forEach(tag => {
       const chip = document.createElement('span');
       chip.className = 'inline-flex items-center gap-1 px-2.5 py-1 bg-secondary-fixed text-on-secondary-fixed-variant rounded-full font-label-md text-label-md';
-      chip.innerHTML = `#${tag} <button aria-label="Eliminar etiqueta" class="hover:text-error leading-none" type="button"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
+      chip.innerHTML = `#${escapeHTML(tag)} <button aria-label="Eliminar etiqueta" class="hover:text-error leading-none" type="button"><span class="material-symbols-outlined text-[14px]">close</span></button>`;
       chip.querySelector('button').addEventListener('click', () => {
         chip.remove();
       });
@@ -587,7 +587,7 @@
       }
 
       if (art.content && contentArea) {
-        contentArea.innerHTML = art.content;
+        contentArea.innerHTML = sanitizeHTML(art.content);
       }
 
       if (art.tags && art.tags.length) {

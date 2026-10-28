@@ -446,6 +446,17 @@
   })();
 </script></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/95 backdrop-blur-xl shadow-[0_-2px_12px_rgba(15,32,66,0.06)]" data-active-classes="text-primary-container font-semibold"><div class="flex justify-around items-center h-16 px-space-xs"><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="inicio" href="index.html"><span class="material-symbols-outlined text-[24px]">school</span><span class="font-label-sm text-label-sm">Inicio</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 transition-colors text-primary-container font-semibold" data-path="publicaciones" href="publicaciones.html"><span class="material-symbols-outlined text-[24px]">menu_book</span><span class="font-label-sm text-label-sm">Artículos</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="recursos-didacticos" href="recursos.html"><span class="material-symbols-outlined text-[24px]">folder_open</span><span class="font-label-sm text-label-sm">Recursos</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="actividades-pedagogicas" href="lectura.html"><span class="material-symbols-outlined text-[24px]">extension</span><span class="font-label-sm text-label-sm">Actividades</span></a><a class="flex flex-col items-center justify-center gap-0.5 min-w-[56px] h-12 text-on-surface-variant hover:text-primary transition-colors" data-path="perfil-docente" href="panel.html"><span class="material-symbols-outlined text-[24px]">person_outline</span><span class="font-label-sm text-label-sm">Perfil</span></a></div></nav><script src="db.js"></script>
 <script>
+// === WhatsApp share helper ===
+function shareWhatsAppCard(btn) {
+  var card = btn.closest('article');
+  var titleEl = card ? card.querySelector('h2') : null;
+  var title = titleEl ? titleEl.textContent.trim() : 'Articulo';
+  var link = card ? card.querySelector('a[href*="lectura.html"]') : null;
+  var url = link ? new URL(link.href, window.location.href).href : window.location.href;
+  var text = '\u{1F4DA} *' + title + '* - Aula Abierta Blog Docente\n' + url;
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+}
+
 (function(){
   const SUBJECT_ICONS = {
     'Ciencias Naturales': 'water_drop',
@@ -484,14 +495,14 @@
     return `
     <article class="bg-surface-container-lowest rounded-2xl overflow-hidden shadow-[0_2px_12px_-2px_rgba(15,32,66,0.06)] flex flex-col transition-all duration-200">
       <div class="relative w-full h-44 bg-surface-container overflow-hidden">
-        <img class="w-full h-full object-cover" src="${coverImg}" alt="${art.coverAlt || art.title}"/>
+        <img class="w-full h-full object-cover" src="${escapeHTML(coverImg)}" alt="${escapeHTML(art.coverAlt || art.title)}"/>
         <div class="absolute top-3 left-3 flex flex-wrap gap-1.5">
           <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-secondary/95 text-on-secondary font-label-sm text-label-sm font-semibold backdrop-blur-xs">
             <span class="material-symbols-outlined text-[13px]">${icon}</span>
-            ${art.subject}
+            ${escapeHTML(art.subject)}
           </span>
           <span class="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-highest/90 text-on-surface font-label-sm text-label-sm backdrop-blur-xs">
-            ${gradeShort}
+            ${escapeHTML(gradeShort)}
           </span>
         </div>
         <button aria-label="Guardar en favoritos" class="absolute top-3 right-3 w-9 h-9 rounded-full bg-surface-container-lowest/90 text-on-surface-variant hover:text-primary flex items-center justify-center backdrop-blur-xs shadow-xs transition-colors" type="button">
@@ -507,20 +518,20 @@
           <span>•</span>
           <span>${formatDate(art.createdAt)}</span>
         </div>
-        <h2 class="font-headline-sm text-headline-sm text-primary font-bold leading-snug">${art.title}</h2>
-        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 leading-relaxed">${art.summary || ''}</p>
+        <h2 class="font-headline-sm text-headline-sm text-primary font-bold leading-snug">${escapeHTML(art.title)}</h2>
+        <p class="font-body-md text-body-md text-on-surface-variant line-clamp-2 leading-relaxed">${escapeHTML(art.summary || '')}</p>
         ${art.tags && art.tags.length ? `
         <div class="flex flex-wrap gap-1.5 pt-1">
-          ${art.tags.slice(0,2).map(t => `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">${t}</span>`).join('')}
+          ${art.tags.slice(0,2).map(t => `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-tertiary-fixed/40 text-on-tertiary-fixed-variant font-label-sm text-label-sm font-semibold">${escapeHTML(t)}</span>`).join('')}
         </div>` : ''}
         <div class="pt-space-sm flex items-center justify-between mt-1">
           <div class="flex items-center gap-2">
-            <img class="w-7 h-7 rounded-full object-cover shadow-xs" src="${avatar}" alt="${art.author}"/>
-            <span class="font-label-md text-label-md text-on-surface font-medium">${art.author || 'Docente'}</span>
+            <img class="w-7 h-7 rounded-full object-cover shadow-xs" src="${escapeHTML(avatar)}" alt="${escapeHTML(art.author)}"/>
+            <span class="font-label-md text-label-md text-on-surface font-medium">${escapeHTML(art.author || 'Docente')}</span>
           </div>
           <div class="flex items-center gap-1.5">
-            <button aria-label="Compartir este artículo" class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors" type="button">
-              <span class="material-symbols-outlined text-[20px]">share</span>
+            <button aria-label="Compartir en WhatsApp" class="w-9 h-9 rounded-lg flex items-center justify-center hover:opacity-80 transition-opacity" style="color:#25D366;" type="button" onclick="shareWhatsAppCard(this)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
             </button>
             <a class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-container text-on-primary font-label-md text-label-md font-semibold shadow-xs hover:opacity-95 transition-opacity" href="lectura.html?id=${art.id}">
               <span>Leer artículo</span>
