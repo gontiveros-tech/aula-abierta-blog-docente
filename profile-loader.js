@@ -22,7 +22,8 @@
 (function() {
   'use strict';
 
-  const DEFAULT_PHOTO = 'https://lh3.googleusercontent.com/aida-public/AB6AXuATtYD4j1Z6J8IkY3sTXTihPHnJEdgRS6TtOsAW0YCGBdzJd-hYOgzZq5CRAmmaUAghGlQ5nNMXMkNGKQQ__DkLNOVV-iOvuLuEMN6QLnNBZSmDGKXV0KaIZ1cQiCqV7gDgoDRohMZhx8YwMNhzjmgQz2lD-K6Tu81uGqt1Ot6P2KdJ9fyYprT477ZsJlvVpbbfZ-wHvTpTYSJUOab4OuWSYLVRgTfHCycBDg0gIBlIRtb_Az2Ta2E';
+  // Avatar genérico por defecto — el docente lo reemplaza desde perfil.html
+  const DEFAULT_PHOTO = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" fill="%236750A4" rx="60"/><text x="60" y="72" text-anchor="middle" font-size="48" font-family="sans-serif" fill="white">👩‍🏫</text></svg>');
 
   let cachedProfile = null;
 
